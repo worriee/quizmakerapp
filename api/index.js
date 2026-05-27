@@ -3,19 +3,19 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const rateLimit = require('express-rate-limit');
 const { createClient } = require('@supabase/supabase-js');
+const { handleChat } = require('./ai');
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
 // Supabase Client for Backend Verification
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 
 // Rate Limiter: Max 20 requests per 15 minutes per IP
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
+  windowMs: 15 * 60 * 1000, 
+  max: 20, 
   message: { error: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -23,7 +23,7 @@ const limiter = rateLimit({
 
 // Restricted CORS
 const corsOptions = {
-  origin: process.env.ALLOWED_ORIGIN || 'http://localhost:5173',
+  origin: process.env.ALLOWED_ORIGIN || '*', // In production, set this to your Vercel URL
   optionsSuccessStatus: 200
 };
 
@@ -51,27 +51,18 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
-const { handleChat } = require('./ai');
-
 function cleanJsonResponse(text) {
-  // Find the first occurrence of '{' and the last occurrence of '}'
   const firstBrace = text.indexOf('{');
   const lastBrace = text.lastIndexOf('}');
-  
-  if (firstBrace === -1 || lastBrace === -1) {
-    return text.trim();
-  }
-  
+  if (firstBrace === -1 || lastBrace === -1) return text.trim();
   return text.substring(firstBrace, lastBrace + 1);
 }
 
 app.get('/', (req, res) => {
-  res.send('Quiz Maker Backend is running!');
+  res.send('AI Tutor API is running on Vercel!');
 });
 
 app.post('/api/chat', limiter, verifyToken, async (req, res) => {
-  console.log(`--- New Chat Request from User: ${req.user.id} ---`);
-  
   try {
     const { message, history } = req.body;
     if (!message) {
@@ -94,6 +85,4 @@ app.post('/api/chat', limiter, verifyToken, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+module.exports = app;

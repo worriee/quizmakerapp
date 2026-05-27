@@ -4,7 +4,7 @@ import ChatInterface from './components/ChatInterface';
 import Login from './components/Login';
 import { supabase } from './supabaseClient';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = '/api';
 
 function App() {
   const [session, setSession] = useState(null);
