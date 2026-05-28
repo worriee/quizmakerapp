@@ -1,5 +1,5 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-require('dotenv').config();
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import 'dotenv/config';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
@@ -52,7 +52,7 @@ TUTORING GUIDELINES:
 - If the user asks for a quiz based on previous notes, use the conversation history to create highly relevant questions.
 `;
 
-async function handleChat(message, history) {
+export async function handleChat(message, history) {
   const model = genAI.getGenerativeModel({ model: "gemma-4-26b-a4b-it" });
   const chat = model.startChat({
     history: [
@@ -73,6 +73,3 @@ async function handleChat(message, history) {
   return response.text();
 }
 
-module.exports = {
-  handleChat,
-};

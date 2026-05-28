@@ -1,11 +1,9 @@
-const express = require('express');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const rateLimit = require('express-rate-limit');
-const { createClient } = require('@supabase/supabase-js');
-const { handleChat } = require('./ai');
-
-dotenv.config();
+import express from 'express';
+import cors from 'cors';
+import 'dotenv/config';
+import rateLimit from 'express-rate-limit';
+import { createClient } from '@supabase/supabase-js';
+import { handleChat } from './ai.js';
 
 const app = express();
 
@@ -85,4 +83,4 @@ app.post(['/api/chat', '/chat'], limiter, verifyToken, async (req, res) => {
   }
 });
 
-module.exports = app;
+export default app;
