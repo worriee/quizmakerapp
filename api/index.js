@@ -62,7 +62,7 @@ app.get('/', (req, res) => {
   res.send('AI Tutor API is running on Vercel!');
 });
 
-app.post('/chat', limiter, verifyToken, async (req, res) => {
+app.post(['/api/chat', '/chat'], limiter, verifyToken, async (req, res) => {
   try {
     const { message, history } = req.body;
     if (!message) {
