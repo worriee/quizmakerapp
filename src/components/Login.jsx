@@ -13,13 +13,18 @@ const Login = () => {
     setLoading(true);
     setError(null);
 
+    console.log('Attempting Login with email:', `"${email}"`);
+
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase Login Error:', error);
+        throw error;
+      }
       // App.jsx will handle the session change via onAuthStateChange
     } catch (err) {
       setError(err.message);
@@ -33,13 +38,18 @@ const Login = () => {
     setLoading(true);
     setError(null);
 
+    console.log('Attempting Sign Up with email:', `"${email}"`);
+
     try {
       const { error } = await supabase.auth.signUp({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase Sign Up Error:', error);
+        throw error;
+      }
       alert('Check your email for the confirmation link!');
     } catch (err) {
       setError(err.message);
