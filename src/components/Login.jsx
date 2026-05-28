@@ -6,6 +6,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isSignUp, setIsSignUp] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -52,11 +53,10 @@ const Login = () => {
       <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-gray-100">
         <div className="text-center mb-8">
           <div className="text-4xl mb-2">🎓</div>
-          <h1 className="text-2xl font-bold text-gray-900">Welcome Back</h1>
-          <p className="text-gray-500 text-sm">Please enter your details to continue</p>
+          <h1 className="text-2xl font-bold text-gray-900">{isSignUp ? 'Create Account' : 'Welcome Back'}</h1>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
             <input
@@ -64,7 +64,7 @@ const Login = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-              placeholder="name@example.com"
+              placeholder="youremail@example.com"
               required
             />
           </div>
@@ -91,21 +91,21 @@ const Login = () => {
             disabled={loading}
             className="w-full bg-indigo-600 text-white font-semibold py-2 rounded-lg hover:bg-indigo-700 transition-colors shadow-md disabled:bg-gray-400"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? (isSignUp ? 'Creating account...' : 'Signing in...') : (isSignUp ? 'Sign Up' : 'Sign In')}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
-            Don't have an account?{' '}
-            <button 
+            {isSignUp ? "Already have an account?" : "Don't have an account?"}{' '}
+            <button
               onClick={(e) => {
                 e.preventDefault();
-                handleSignUp();
+                setIsSignUp(!isSignUp);
               }}
               className="text-indigo-600 font-semibold hover:underline"
             >
-              Sign Up
+              {isSignUp ? 'Sign In' : 'Sign Up'}
             </button>
           </p>
         </div>
