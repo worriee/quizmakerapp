@@ -30,21 +30,27 @@ app.use(express.json());
 
 // Auth Middleware to verify Supabase JWT
 const verifyToken = async (req, res, next) => {
+  console.log('--- Auth Middleware Start ---');
   const authHeader = req.headers.authorization;
+  console.log('Auth Header present:', !!authHeader);
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('Auth Header missing or invalid format');
     return res.status(401).json({ error: 'Authentication token is missing' });
   }
 
   const token = authHeader.split(' ')[1];
   try {
+    console.log('Verifying token with Supabase...');
     const { data: { user }, error } = await supabase.auth.getUser(token);
     if (error || !user) {
+      console.error('Supabase getUser error:', error);
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
+    console.log('User verified:', user.id);
     req.user = user;
     next();
   } catch (err) {
-    console.error('JWT Verification Error:', err);
+    console.error('JWT Verification Exception:', err);
     res.status(500).json({ error: 'Internal server error during authentication' });
   }
 };
@@ -61,17 +67,25 @@ app.get('/', (req, res) => {
 });
 
 app.post(['/api/chat', '/chat'], limiter, verifyToken, async (req, res) => {
+  console.log('--- Chat Request Received ---');
+  console.log('Body:', req.body);
   try {
     const { message, history } = req.body;
     if (!message) {
+      console.log('Error: Message is missing from body');
       return res.status(400).json({ error: 'Message is required' });
     }
     
+    console.log('Calling handleChat...');
     const aiResponse = await handleChat(message, history || []);
+    console.log('AI Response received:', aiResponse);
+    
     const cleanedResponse = cleanJsonResponse(aiResponse);
+    console.log('Cleaned Response:', cleanedResponse);
     
     try {
       const parsed = JSON.parse(cleanedResponse);
+      console.log('Successfully parsed JSON');
       res.json(parsed);
     } catch (parseError) {
       console.error('JSON Parse Error:', parseError);
