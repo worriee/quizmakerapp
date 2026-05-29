@@ -53,8 +53,16 @@ TUTORING GUIDELINES:
 `;
 
 export async function handleChat(message, history) {
+  console.log('--- AI Handler Start ---');
+  console.log('API Key status:', process.env.GOOGLE_API_KEY ? 'Present' : 'Missing');
+  if (process.env.GOOGLE_API_KEY) {
+    console.log('API Key starts with:', process.env.GOOGLE_API_KEY.substring(0, 4), '...');
+  }
+  console.log('Model being used:', "gemma-4-26b-a4b-it");
+  
   const model = genAI.getGenerativeModel({ model: "gemma-4-26b-a4b-it" });
   const chat = model.startChat({
+
     history: [
       {
         role: "user",
