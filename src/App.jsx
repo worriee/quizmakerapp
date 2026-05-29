@@ -18,9 +18,10 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [sessions, setSessions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
+  const [abortController, setAbortController] = useState(null);
 
-  // Initial setup: Check for existing session and listen for auth changes
   useEffect(() => {
+
     // Initial session check on load
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -96,10 +97,14 @@ function App() {
 
   // Main function to send a message to the AI backend
   const handleSendMessage = async (text) => {
-    // Optimistically add user message to the UI
+    // Add user message to UI
     const userMsg = { role: 'user', text, type: 'text' };
     setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);
+
+    // Create a new AbortController for this request
+    const controller = new AbortController();
+    setAbortController(controller);
 
     try {
       const response = await fetch(`${API_BASE_URL}/chat`, {
@@ -108,6 +113,7 @@ function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token}`
         },
+        signal: controller.signal,
         body: JSON.stringify({
           message: text,
           history: history,
@@ -116,13 +122,13 @@ function App() {
       
       const data = await response.json();
       
-      // Append AI's JSON response to the UI message stream
+      // Add AI response to UI
       setMessages(prev => [...prev, { 
         role: 'model', 
         ...data 
       }]);
 
-      // Format history for the AI SDK (parts array)
+      // Update history for the AI SDK
       const updatedHistory = [
         ...history,
         { role: 'user', parts: [{ text }] },
@@ -130,24 +136,33 @@ function App() {
       ];
       setHistory(updatedHistory);
       
-      // Determine topic for DB storage (first message if new chat)
+      // Save to DB
       const topic = messages.length === 0 ? text : sessions.find(s => s.id === currentSessionId)?.topic || 'Chat';
       await saveSessionToDb(updatedHistory, topic);
     } catch (error) {
-      console.error('Error sending message:', error);
-      setMessages(prev => [...prev, { 
-        role: 'model', 
-        text: 'Sorry, I encountered an error. Please make sure the server is running.', 
-        type: 'text' 
-      }]);
+      if (error.name === 'AbortError') {
+        console.log('Request aborted by user');
+      } else {
+        console.error('Error sending message:', error);
+        setMessages(prev => [...prev, { 
+          role: 'model', 
+          text: 'Sorry, I encountered an error. Please make sure the server is running.', 
+          type: 'text' 
+        }]);
+      }
     } finally {
       setIsLoading(false);
+      setAbortController(null);
     }
   };
 
-  // Special trigger to switch AI into "Quiz Mode" based on current notes
   const handleStartQuiz = async () => {
     setIsLoading(true);
+    
+    // Create a new AbortController for this request
+    const controller = new AbortController();
+    setAbortController(controller);
+
     try {
       const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
@@ -155,6 +170,7 @@ function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token}`
         },
+        signal: controller.signal,
         body: JSON.stringify({
           message: 'Now, start a mock quiz based on the notes provided above.',
           history: history
@@ -168,6 +184,7 @@ function App() {
         ...data 
       }]);
 
+      // Update history for the AI SDK
       const updatedHistory = [
         ...history,
         { role: 'user', parts: [{ text: 'Start a mock quiz based on the notes provided above.' }] },
@@ -175,17 +192,31 @@ function App() {
       ];
       setHistory(updatedHistory);
       
+      // Save to DB
       const topic = sessions.find(s => s.id === currentSessionId)?.topic || 'Quiz Session';
       await saveSessionToDb(updatedHistory, topic);
     } catch (error) {
-      console.error('Error starting quiz:', error);
+      if (error.name === 'AbortError') {
+        console.log('Request aborted by user');
+      } else {
+        console.error('Error starting quiz:', error);
+      }
     } finally {
       setIsLoading(false);
+      setAbortController(null);
     }
   };
 
-  // Resets the current chat state for a new conversation
+  const stopGenerating = () => {
+    if (abortController) {
+      abortController.abort();
+      setIsLoading(false);
+      setAbortController(null);
+    }
+  };
+
   const handleNewChat = () => {
+
     setMessages([]);
     setHistory([]);
     setCurrentSessionId(null);
@@ -244,6 +275,7 @@ function App() {
             onSendMessage={handleSendMessage}
             isLoading={isLoading}
             onStartQuiz={handleStartQuiz}
+            onStopGenerating={stopGenerating}
           />
         </MainLayout>
       )}

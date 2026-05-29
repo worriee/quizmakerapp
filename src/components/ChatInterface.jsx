@@ -6,7 +6,7 @@ import remarkGfm from 'remark-gfm';
  * ChatInterface Component: The primary user interface for interacting with the AI.
  * Handles message rendering, markdown parsing, and the input form.
  */
-const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
+const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStopGenerating }) => {
   const [input, setInput] = useState('');
   const scrollRef = useRef(null);
 
@@ -134,17 +134,28 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
             className="w-full px-6 py-4 pr-16 rounded-2xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none shadow-sm transition-all bg-white"
             disabled={isLoading}
           />
-          <button
-            type="submit"
-            disabled={isLoading || !input.trim()}
-            className="absolute right-3 top-1/2 -translate-y-1/2 bg-indigo-600 text-white p-2 rounded-xl hover:bg-indigo-700 disabled:bg-gray-300 transition-all"
-          >
-            {isLoading ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            ) : (
-              <span className="text-xl">↑</span>
-            )}
-          </button>
+           <button
+             type="submit"
+             disabled={!isLoading && (!input.trim())}
+             onClick={(e) => {
+               if (isLoading) {
+                 e.preventDefault();
+                 onStopGenerating();
+               }
+             }}
+             className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${
+               isLoading 
+                 ? 'bg-red-500 text-white hover:bg-red-600' 
+                 : 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-300'
+             }`}
+           >
+             {isLoading ? (
+               <span className="text-xs font-bold px-1">STOP</span>
+             ) : (
+               <span className="text-xl">↑</span>
+             )}
+           </button>
+
         </form>
         <p className="text-center text-[10px] text-gray-400 mt-3">
           AI can make mistakes. Check important info.

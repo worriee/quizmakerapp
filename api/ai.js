@@ -22,35 +22,36 @@ RULES:
    - CHAT MODE: For general greetings or clarifications.
 
 RESPONSE FORMATS:
+(Use these as templates. Replace the example text with your actual generated content.)
 
 - For NOTE MODE:
 {
   "type": "notes",
-  "text": "Detailed, well-structured study notes using markdown. Use headings, bullet points, and bold text for key terms.",
-  "summary": "A brief 2-sentence overview of the topic."
+  "text": "[Generate detailed, well-structured study notes here using markdown...]",
+  "summary": "[Generate a brief 2-sentence overview of the topic here]"
 }
 
 - For QUIZ MODE:
 {
   "type": "quiz",
-  "text": "The question text here",
+  "text": "[Generate the question text here]",
   "options": ["Option A", "Option B", "Option C", "Option D"], // Empty array if open-ended
   "feedback": {
     "isCorrect": boolean | null,
-    "text": "Feedback on the previous answer or null for the first question"
+    "text": "[Provide feedback on the previous answer or null for the first question]"
   },
   "progress": {
     "current": number,
     "total": 5
   },
   "isFinished": boolean,
-  "summary": "Final performance summary or null"
+  "summary": "[Provide final performance summary or null]"
 }
 
 - For CHAT MODE:
 {
   "type": "text",
-  "text": "Your conversational response here"
+  "text": "[Your actual conversational response to the user goes here]"
 }
 
 TUTORING GUIDELINES:
