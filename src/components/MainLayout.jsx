@@ -38,8 +38,8 @@ const MainLayout = ({ children, onNewChat }) => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col relative overflow-hidden">
-        {/* Mobile Header */}
-        <div className="lg:hidden flex items-center p-4 border-b border-gray-200 bg-white">
+        {/* Header */}
+        <div className="flex items-center p-4 border-b border-gray-200 bg-white">
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="p-2 hover:bg-gray-100 rounded-lg transition-all"
