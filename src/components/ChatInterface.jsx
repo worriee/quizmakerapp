@@ -2,16 +2,22 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+/**
+ * ChatInterface Component: The primary user interface for interacting with the AI.
+ * Handles message rendering, markdown parsing, and the input form.
+ */
 const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
   const [input, setInput] = useState('');
   const scrollRef = useRef(null);
 
+  // Auto-scroll to bottom whenever new messages are added
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
 
+  // Handles form submission for sending messages
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
@@ -21,11 +27,12 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
 
   return (
     <div className="flex flex-col h-full bg-white">
-      {/* Messages Area */}
+      {/* Messages Display Area */}
       <div 
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6"
       >
+        {/* Empty State: Shown when no messages exist in the session */}
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50">
             <div className="text-5xl">✨</div>
@@ -35,6 +42,7 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
             </p>
           </div>
         ) : (
+          // Render each message based on its role (user vs model) and type
           messages.map((msg, idx) => (
             <div 
               key={idx} 
@@ -45,7 +53,8 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
                   ? 'bg-gray-100 text-gray-800 rounded-tr-none' 
                   : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none shadow-sm'
               }`}>
-                {/* AI Quiz Content */}
+                
+                {/* Render Quiz Content: Options and Feedback */}
                 {msg.type === 'quiz' && (
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 uppercase tracking-wider mb-2">
@@ -54,19 +63,21 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
                       <span>Question {msg.progress?.current} of {msg.progress?.total}</span>
                     </div>
                     
+                    {/* Feedback for the previous answer */}
                     {msg.feedback && (
                       <div className={`p-3 rounded-lg mb-4 text-sm ${
                         msg.feedback.isCorrect 
                           ? 'bg-green-50 text-green-800 border border-green-100' 
                           : 'bg-red-50 text-red-800 border border-red-100'
                       }`}>
-                        <p className="font-bold mb-1">{msg.feedback.isCorrect ? '✅ Correct!' : '❌ Not quite'}</p>
+                        <p className="font-bold mb-1">{msg.feedback.isCorrect ? '✅ Correct!' : '❌ Kupal!'}</p>
                         <p>{msg.feedback.text}</p>
                       </div>
                     )}
                     
                     <p className="font-medium text-lg leading-relaxed">{msg.text}</p>
                     
+                    {/* Multiple Choice Options */}
                     {msg.options && msg.options.length > 0 && (
                       <div className="grid grid-cols-1 gap-2 mt-4">
                         {msg.options.map((option, oIdx) => (
@@ -83,7 +94,7 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
                   </div>
                 )}
 
-                {/* Standard Text Content (Notes/Chat) */}
+                {/* Render Standard Text (Markdown) for Notes and General Chat */}
                 {msg.type !== 'quiz' && (
                   <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -92,7 +103,7 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
                   </div>
                 )}
 
-                {/* Action Button for Notes -> Quiz transition */}
+                {/* Special Action Button: Trigger Quiz generation after notes are presented */}
                 {msg.type === 'notes' && (
                   <div className="mt-6 flex justify-end">
                     <button 
@@ -109,7 +120,7 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
         )}
       </div>
 
-      {/* Input Area */}
+      {/* Bottom Input Bar */}
       <div className="p-4 md:p-8 bg-gradient-to-t from-white via-white to-transparent">
         <form 
           onSubmit={handleSubmit}

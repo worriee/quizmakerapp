@@ -6,48 +6,49 @@ import { createClient } from '@supabase/supabase-js';
 import { handleChat } from './ai.js';
 
 const app = express();
+
+// Trust the first proxy (Vercel) to get the correct client IP for rate limiting
 app.set('trust proxy', 1);
 
-// Supabase Client for Backend Verification
+// Initialize Supabase client for server-side JWT verification
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 
-// Rate Limiter: Max 20 requests per 15 minutes per IP
+// Rate Limiting: Prevent API abuse by limiting requests per IP
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, 
-  max: 20, 
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Limit each IP to 20 requests per window
   message: { error: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// Restricted CORS
+// CORS Configuration: Restrict API access to the trusted frontend domain
 const corsOptions = {
-  origin: process.env.ALLOWED_ORIGIN || '*', // In production, set this to your Vercel URL
+  origin: process.env.ALLOWED_ORIGIN || '*', // Use environment variable for production URL
   optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Auth Middleware to verify Supabase JWT
+// Middleware: Validates the Supabase JWT provided in the Authorization header
 const verifyToken = async (req, res, next) => {
-  console.log('--- Auth Middleware Start ---');
   const authHeader = req.headers.authorization;
-  console.log('Auth Header present:', !!authHeader);
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.log('Auth Header missing or invalid format');
     return res.status(401).json({ error: 'Authentication token is missing' });
   }
 
   const token = authHeader.split(' ')[1];
   try {
-    console.log('Verifying token with Supabase...');
+    // Verify the token with Supabase to ensure the user is authenticated
     const { data: { user }, error } = await supabase.auth.getUser(token);
     if (error || !user) {
       console.error('Supabase getUser error:', error);
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
-    console.log('User verified:', user.id);
+    
+    // Attach the verified user to the request object for later use
     req.user = user;
     next();
   } catch (err) {
@@ -56,37 +57,48 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
+// Utility: Extracts JSON content from AI responses, handling potential markdown blocks or reasoning text
 function cleanJsonResponse(text) {
+  // 1. Try to extract content from a ```json block
+  const jsonBlockMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
+  if (jsonBlockMatch) {
+    return jsonBlockMatch[1].trim();
+  }
+
+  // 2. Try to extract content from any generic ``` block
+  const genericBlockMatch = text.match(/```\s*([\s\S]*?)\s*```/);
+  if (genericBlockMatch) {
+    return genericBlockMatch[1].trim();
+  }
+
+  // 3. Fallback: Find the first and last curly braces to isolate the JSON object
   const firstBrace = text.indexOf('{');
   const lastBrace = text.lastIndexOf('}');
   if (firstBrace === -1 || lastBrace === -1) return text.trim();
   return text.substring(firstBrace, lastBrace + 1);
 }
 
+// Root endpoint for health check
 app.get('/', (req, res) => {
   res.send('AI Tutor API is running on Vercel!');
 });
 
+// Main Chat Endpoint: Handles user messages and generates AI responses
 app.post(['/api/chat', '/chat'], limiter, verifyToken, async (req, res) => {
-  console.log('--- Chat Request Received ---');
-  console.log('Body:', req.body);
   try {
     const { message, history } = req.body;
     if (!message) {
-      console.log('Error: Message is missing from body');
       return res.status(400).json({ error: 'Message is required' });
     }
     
-    console.log('Calling handleChat...');
+    // Process the request using the AI logic defined in ai.js
     const aiResponse = await handleChat(message, history || []);
-    console.log('AI Response received:', aiResponse);
     
+    // Clean the AI response to ensure it's a valid JSON string
     const cleanedResponse = cleanJsonResponse(aiResponse);
-    console.log('Cleaned Response:', cleanedResponse);
     
     try {
       const parsed = JSON.parse(cleanedResponse);
-      console.log('Successfully parsed JSON');
       res.json(parsed);
     } catch (parseError) {
       console.error('JSON Parse Error:', parseError);

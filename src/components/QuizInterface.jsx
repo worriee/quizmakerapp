@@ -1,15 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 
+/**
+ * QuizInterface Component: Provides a specialized, focused view for the interactive mock exam.
+ * Handles user answers and displays real-time AI feedback.
+ */
 const QuizInterface = ({ session, isLoading, onAnswer }) => {
   const [userAnswer, setUserAnswer] = useState('');
   const scrollRef = useRef(null);
 
+  // Ensure the chat view scrolls to the most recent feedback/question
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [session]);
 
+  // Handles submission of the user's answer
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!userAnswer.trim() || isLoading) return;
@@ -19,7 +25,7 @@ const QuizInterface = ({ session, isLoading, onAnswer }) => {
 
   return (
     <div className="flex flex-col h-screen max-w-2xl mx-auto bg-gray-50 shadow-xl">
-      {/* Header */}
+      {/* Quiz Header: Displays current progress */}
       <div className="bg-indigo-600 text-white p-4 flex justify-between items-center sticky top-0 z-10">
         <h2 className="text-xl font-bold">Interactive Tutor</h2>
         <div className="text-sm bg-indigo-500 px-3 py-1 rounded-full">
@@ -27,12 +33,12 @@ const QuizInterface = ({ session, isLoading, onAnswer }) => {
         </div>
       </div>
 
-      {/* Chat Area */}
+      {/* Interaction Area */}
       <div 
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-4 space-y-4"
       >
-        {/* AI Feedback (if any) */}
+        {/* AI Feedback: Shown after a user answers a question */}
         {session.feedback && (
           <div className="flex justify-start animate-in fade-in slide-in-from-left-2 duration-300">
             <div className={`max-w-[85%] p-4 rounded-2xl rounded-tl-none shadow-sm ${
@@ -51,10 +57,11 @@ const QuizInterface = ({ session, isLoading, onAnswer }) => {
           </div>
         )}
 
-        {/* AI Question */}
+        {/* Current AI Question */}
         <div className="flex justify-start animate-in fade-in slide-in-from-left-2 duration-300">
           <div className="max-w-[85%] p-4 bg-white text-gray-800 rounded-2xl rounded-tl-none shadow-sm border border-gray-200">
             <p className="font-medium leading-relaxed">{session.question.text}</p>
+            {/* Multiple Choice Options (if provided by AI) */}
             {session.question.options && session.question.options.length > 0 && (
               <div className="mt-4 grid grid-cols-1 gap-2">
                 {session.question.options.map((option, idx) => (
@@ -72,7 +79,7 @@ const QuizInterface = ({ session, isLoading, onAnswer }) => {
         </div>
       </div>
 
-      {/* Input Area */}
+      {/* Answer Input Form */}
       <form
         onSubmit={handleSubmit}
         className="p-4 bg-white border-t border-gray-200 flex gap-2"

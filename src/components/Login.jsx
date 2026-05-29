@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 
+/**
+ * Login Component: Handles user authentication via Supabase (Email/Password).
+ * Supports both Sign-In and Sign-Up modes.
+ */
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -8,12 +12,11 @@ const Login = () => {
   const [error, setError] = useState(null);
   const [isSignUp, setIsSignUp] = useState(false);
 
+  // Function to handle signing in existing users
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
-    console.log('Attempting Login with email:', `"${email}"`);
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -25,7 +28,7 @@ const Login = () => {
         console.error('Supabase Login Error:', error);
         throw error;
       }
-      // App.jsx will handle the session change via onAuthStateChange
+      // Note: App.jsx handles the session update via onAuthStateChange listener
     } catch (err) {
       setError(err.message);
     } finally {
@@ -33,12 +36,11 @@ const Login = () => {
     }
   };
 
+  // Function to handle creating new user accounts
   const handleSignUp = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
-    console.log('Attempting Sign Up with email:', `"${email}"`);
 
     try {
       const { error } = await supabase.auth.signUp({
@@ -61,11 +63,13 @@ const Login = () => {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
       <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-gray-100">
+        {/* Header Section */}
         <div className="text-center mb-8">
           <div className="text-4xl mb-2">🎓</div>
           <h1 className="text-2xl font-bold text-gray-900">{isSignUp ? 'Create Account' : 'Welcome Back'}</h1>
         </div>
 
+        {/* Auth Form */}
         <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
@@ -90,6 +94,7 @@ const Login = () => {
             />
           </div>
 
+          {/* Error Notification */}
           {error && (
             <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg">
               {error}
@@ -105,6 +110,7 @@ const Login = () => {
           </button>
         </form>
 
+        {/* Toggle between Sign In and Sign Up */}
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
             {isSignUp ? "Already have an account?" : "Don't have an account?"}{' '}

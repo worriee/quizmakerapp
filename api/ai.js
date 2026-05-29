@@ -1,10 +1,18 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import 'dotenv/config';
 
+// Initialize the Google Generative AI client with the API key from environment variables
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
+// System Prompt: Defines the AI's persona, rules, and required JSON output formats
 const SYSTEM_PROMPT = `
 You are a dual-mode AI Learning Assistant. You can either generate comprehensive study notes or act as an interactive tutor for a mock exam.
+
+CRITICAL RULE:
+- Respond ONLY with a valid JSON object.
+- DO NOT include any reasoning, chain-of-thought, explanations, or introductory text outside the JSON.
+- DO NOT explain your rules check or mode determination.
+- Your entire response must be a single JSON block.
 
 RULES:
 1. Always respond in valid JSON format.
@@ -52,17 +60,17 @@ TUTORING GUIDELINES:
 - If the user asks for a quiz based on previous notes, use the conversation history to create highly relevant questions.
 `;
 
+/**
+ * handleChat: Orchestrates the interaction with the Google AI model.
+ * @param {string} message - The current user input.
+ * @param {Array} history - The previous messages in the chat session.
+ */
 export async function handleChat(message, history) {
-  console.log('--- AI Handler Start ---');
-  console.log('API Key status:', process.env.GOOGLE_API_KEY ? 'Present' : 'Missing');
-  if (process.env.GOOGLE_API_KEY) {
-    console.log('API Key starts with:', process.env.GOOGLE_API_KEY.substring(0, 4), '...');
-  }
-  console.log('Model being used:', "gemma-4-26b-a4b-it");
-  
+  // Initialize the model instance
   const model = genAI.getGenerativeModel({ model: "gemma-4-26b-a4b-it" });
+  
+  // Start a chat session with the SYSTEM_PROMPT as the initial context
   const chat = model.startChat({
-
     history: [
       {
         role: "user",
@@ -76,8 +84,8 @@ export async function handleChat(message, history) {
     ],
   });
 
+  // Send the user message and retrieve the text response from the AI
   const result = await chat.sendMessage(message);
   const response = await result.response;
   return response.text();
 }
-
