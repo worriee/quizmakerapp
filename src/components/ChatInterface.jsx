@@ -24,9 +24,19 @@ const renderRawAIOutput = (text) => {
   );
 };
 
+import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+/**
+ * ChatInterface Component: The primary user interface for interacting with the AI.
+ * Handles message rendering, markdown parsing, and the input form.
+ */
 const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStopGenerating }) => {
   const [input, setInput] = useState('');
   const scrollRef = useRef(null);
+  // State to track which reasoning blocks are expanded/collapsed
+  const [expandedThoughts, setExpandedThoughts] = useState({});
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -39,6 +49,13 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
     if (!input.trim() || isLoading) return;
     onSendMessage(input);
     setInput('');
+  };
+
+  const toggleThought = (idx) => {
+    setExpandedThoughts(prev => ({
+      ...prev,
+      [idx]: !prev[idx]
+    }));
   };
 
   return (
@@ -69,17 +86,36 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
                 
                 {msg.role === 'model' && msg.raw && (
                   <>
-                    {/* Only show the reasoning if it's not empty and actually contains content */}
+                    {/* Reasoning Process: Minimized by default */}
                     {msg.raw.includes('<thought>') && (
-                      <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100 text-sm text-gray-500 italic leading-relaxed overflow-hidden break-words">
-                        <div className="font-semibold text-gray-400 mb-1 flex items-center gap-2">
-                          <span className="text-xs">💭 Reasoning</span>
+                      <div className={`mb-4 transition-all duration-200 overflow-hidden ${expandedThoughts[idx] ? 'max-h-[1000px] opacity-100' : 'max-h-10 opacity-80'}`}>
+                        <div 
+                          onClick={() => toggleThought(idx)}
+                          className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors group"
+                        >
+                          <div className="flex items-center gap-2 text-xs font-medium text-gray-400">
+                            <span>💭 Reasoning</span>
+                          </div>
+                          <div className="text-gray-400 group-hover:text-indigo-500 transition-colors">
+                            {expandedThoughts[idx] ? (
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                              </svg>
+                            ) : (
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            )}
+                          </div>
                         </div>
-                        {msg.raw.match(/<thought>([\s\S]*?)<\/thought>/)?.[1] || ''}
+                        {expandedThoughts[idx] && (
+                          <div className="mt-2 p-3 text-sm text-gray-500 italic leading-relaxed bg-gray-50 rounded-b-lg border-x border-b border-gray-100 break-words">
+                            {msg.raw.match(/<thought>([\s\S]*?)<\/thought>/)?.[1] || ''}
+                          </div>
+                        )}
                       </div>
                     )}
                     
-                    {/* Render the parsed final output instead of the raw string to avoid JSON showing in UI */}
                     <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed overflow-hidden break-words">
                       <ReactMarkdown remarkGfm>
                         {msg.text}
@@ -216,4 +252,5 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
 };
 
 export default ChatInterface;
+
 
