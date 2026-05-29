@@ -59,7 +59,7 @@ const verifyToken = async (req, res, next) => {
 
 // Utility: Extracts JSON content from AI responses, handling potential markdown blocks or reasoning text
 function cleanJsonResponse(text) {
-  // 1. Try to extract content from a ```json block
+  // 1. Try to extract content from a ```json block (Highest priority)
   const jsonBlockMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
   if (jsonBlockMatch) {
     return jsonBlockMatch[1].trim();
@@ -71,15 +71,45 @@ function cleanJsonResponse(text) {
     return genericBlockMatch[1].trim();
   }
 
-  // 3. Fallback: Find the first and last curly braces to isolate the JSON object
+  // 3. Advanced Extraction for Reasoning Models:
+  // Reasoning models often output multiple JSON blocks (e.g., {thought: ...} {type: ...}).
+  // We look for the LAST valid JSON object in the text.
+  const braceMatches = [];
+  let stack = [];
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '{') {
+      stack.push(i);
+    } else if (text[i] === '}' && stack.length > 0) {
+      const start = stack.pop();
+      braceMatches.push({ start, end: i + 1 });
+    }
+  }
+
+  if (braceMatches.length > 0) {
+    // Sort by start position descending to check the last object first
+    braceMatches.sort((a, b) => b.start - a.start);
+    
+    for (const match of braceMatches) {
+      const candidate = text.substring(match.start, match.end);
+      try {
+        JSON.parse(candidate);
+        return candidate; // Return the first valid JSON object found starting from the end
+      } catch (e) {
+        // Not valid JSON, try the next one
+      }
+    }
+  }
+
+  // 4. Fallback: Final attempt using first/last brace
   const firstBrace = text.indexOf('{');
   const lastBrace = text.lastIndexOf('}');
   if (firstBrace === -1 || lastBrace === -1) return text.trim();
   return text.substring(firstBrace, lastBrace + 1);
 }
-
+ 
 // Root endpoint for health check
 app.get('/', (req, res) => {
+
   res.send('AI Tutor API is running on Vercel!');
 });
 
