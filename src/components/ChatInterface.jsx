@@ -125,7 +125,7 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
                       onClick={onStartQuiz}
                       className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-all shadow-sm flex items-center gap-2"
                     >
-                      <span>📝</span> Start Mock Quiz based on these notes
+                      <span>📝</span> Start Mock Quiz
                     </button>
                   </div>
                 )}
@@ -175,7 +175,7 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
           </button>
         </form>
         <p className="text-center text-[10px] text-gray-400 mt-3">
-          AI can make mistakes. Check important info.
+          Studying + Cheating = Perfection. -Julry
         </p>
       </div>
     </div>

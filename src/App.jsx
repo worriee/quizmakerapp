@@ -97,12 +97,10 @@ function App() {
 
   // Main function to send a message to the AI backend
   const handleSendMessage = async (text) => {
-    // Add user message to UI
     const userMsg = { role: 'user', text, type: 'text' };
     setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);
 
-    // Create a new AbortController for this request
     const controller = new AbortController();
     setAbortController(controller);
 
@@ -120,15 +118,18 @@ function App() {
         }),
       });
       
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server responded with ${response.status}`);
+      }
+
       const data = await response.json();
       
-      // Add AI response to UI
       setMessages(prev => [...prev, { 
         role: 'model', 
         ...data 
       }]);
 
-      // Update history for the AI SDK
       const updatedHistory = [
         ...history,
         { role: 'user', parts: [{ text }] },
@@ -136,7 +137,6 @@ function App() {
       ];
       setHistory(updatedHistory);
       
-      // Save to DB
       const topic = messages.length === 0 ? text : sessions.find(s => s.id === currentSessionId)?.topic || 'Chat';
       await saveSessionToDb(updatedHistory, topic);
     } catch (error) {
@@ -146,7 +146,7 @@ function App() {
         console.error('Error sending message:', error);
         setMessages(prev => [...prev, { 
           role: 'model', 
-          text: 'Sorry, I encountered an error. Please make sure the server is running.', 
+          text: `Error: ${error.message}`, 
           type: 'text' 
         }]);
       }
@@ -159,7 +159,6 @@ function App() {
   const handleStartQuiz = async () => {
     setIsLoading(true);
     
-    // Create a new AbortController for this request
     const controller = new AbortController();
     setAbortController(controller);
 
@@ -177,6 +176,11 @@ function App() {
         }),
       });
       
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server responded with ${response.status}`);
+      }
+
       const data = await response.json();
       
       setMessages(prev => [...prev, { 
@@ -184,7 +188,6 @@ function App() {
         ...data 
       }]);
 
-      // Update history for the AI SDK
       const updatedHistory = [
         ...history,
         { role: 'user', parts: [{ text: 'Start a mock quiz based on the notes provided above.' }] },
@@ -192,7 +195,6 @@ function App() {
       ];
       setHistory(updatedHistory);
       
-      // Save to DB
       const topic = sessions.find(s => s.id === currentSessionId)?.topic || 'Quiz Session';
       await saveSessionToDb(updatedHistory, topic);
     } catch (error) {
@@ -200,6 +202,11 @@ function App() {
         console.log('Request aborted by user');
       } else {
         console.error('Error starting quiz:', error);
+        setMessages(prev => [...prev, { 
+          role: 'model', 
+          text: `Error: ${error.message}`, 
+          type: 'text' 
+        }]);
       }
     } finally {
       setIsLoading(false);
