@@ -24,10 +24,6 @@ const renderRawAIOutput = (text) => {
   );
 };
 
-import React, { useState, useEffect, useRef } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-
 /**
  * ChatInterface Component: The primary user interface for interacting with the AI.
  * Handles message rendering, markdown parsing, and the input form.
@@ -252,5 +248,3 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
 };
 
 export default ChatInterface;
-
-
