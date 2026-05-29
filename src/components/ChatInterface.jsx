@@ -61,7 +61,7 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
               key={idx} 
               className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}
             >
-              <div className={`max-w-[85%] md:max-w-2xl p-4 rounded-2xl ${
+              <div className={`max-w-[90%] md:max-w-2xl p-4 rounded-2xl ${
                 msg.role === 'user' 
                   ? 'bg-gray-100 text-gray-800 rounded-tr-none' 
                   : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none shadow-sm'
@@ -69,8 +69,23 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
                 
                 {msg.role === 'model' && msg.raw && (
                   <>
-                    {renderRawAIOutput(msg.raw)}
+                    {/* Only show the reasoning if it's not empty and actually contains content */}
+                    {msg.raw.includes('<thought>') && (
+                      <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100 text-sm text-gray-500 italic leading-relaxed overflow-hidden break-words">
+                        <div className="font-semibold text-gray-400 mb-1 flex items-center gap-2">
+                          <span className="text-xs">💭 Reasoning</span>
+                        </div>
+                        {msg.raw.match(/<thought>([\s\S]*?)<\/thought>/)?.[1] || ''}
+                      </div>
+                    )}
                     
+                    {/* Render the parsed final output instead of the raw string to avoid JSON showing in UI */}
+                    <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed overflow-hidden break-words">
+                      <ReactMarkdown remarkGfm>
+                        {msg.text}
+                      </ReactMarkdown>
+                    </div>
+
                     {msg.type === 'quiz' && (
                       <div className="mt-6 pt-6 border-t border-gray-100 space-y-4">
                         <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 uppercase tracking-wider mb-2">
@@ -111,7 +126,7 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
                 )}
 
                 {msg.role === 'model' && !msg.raw && msg.type !== 'quiz' && (
-                  <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed">
+                  <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed overflow-hidden break-words">
                     <ReactMarkdown remarkGfm>
                       {msg.text}
                     </ReactMarkdown>
@@ -119,7 +134,7 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
                 )}
 
                 {msg.role === 'user' && (
-                  <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed">
+                  <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed break-words">
                     {msg.text}
                   </div>
                 )}
@@ -143,12 +158,12 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
           <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="max-w-[85%] md:max-w-2xl p-4 rounded-2xl bg-white border border-gray-200 text-gray-800 rounded-tl-none shadow-sm">
               <div className="flex items-center gap-3 text-gray-500">
+                <span className="text-sm font-medium italic">Thinking</span>
                 <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                  <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                  <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div>
+                  <div className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                  <div className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                  <div className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce"></div>
                 </div>
-                <span className="text-sm font-medium italic">Thinking...</span>
               </div>
             </div>
           </div>
@@ -201,3 +216,4 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
 };
 
 export default ChatInterface;
+
