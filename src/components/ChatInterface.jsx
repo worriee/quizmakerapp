@@ -54,7 +54,22 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
                   : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none shadow-sm'
               }`}>
                 
-                {/* Render Quiz Content: Options and Feedback */}
+                {/* Reasoning Process: Shown in a collapsed UI if thought exists */}
+                {msg.role === 'model' && msg.thought && (
+                  <details className="mb-4 group">
+                    <summary className="flex items-center gap-2 text-xs font-medium text-gray-400 cursor-pointer hover:text-indigo-500 transition-colors list-none select-none">
+                      <svg className="w-3 h-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                      <span>View Reasoning</span>
+                    </summary>
+                    <div className="mt-2 p-3 text-sm text-gray-600 bg-gray-50 rounded-lg border border-gray-100 italic leading-relaxed">
+                      {msg.thought}
+                    </div>
+                  </details>
+                )}
+
+                {/* AI Quiz Content: Options and Feedback */}
                 {msg.type === 'quiz' && (
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 uppercase tracking-wider mb-2">
@@ -70,7 +85,7 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
                           ? 'bg-green-50 text-green-800 border border-green-100' 
                           : 'bg-red-50 text-red-800 border border-red-100'
                       }`}>
-                        <p className="font-bold mb-1">{msg.feedback.isCorrect ? '✅ Correct!' : '❌ Kupal!'}</p>
+                        <p className="font-bold mb-1">{msg.feedback.isCorrect ? '✅ Correct!' : '❌ Not quite'}</p>
                         <p>{msg.feedback.text}</p>
                       </div>
                     )}
@@ -134,28 +149,30 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
             className="w-full px-6 py-4 pr-16 rounded-2xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none shadow-sm transition-all bg-white"
             disabled={isLoading}
           />
-           <button
-             type="submit"
-             disabled={!isLoading && (!input.trim())}
-             onClick={(e) => {
-               if (isLoading) {
-                 e.preventDefault();
-                 onStopGenerating();
-               }
-             }}
-             className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${
-               isLoading 
-                 ? 'bg-red-500 text-white hover:bg-red-600' 
-                 : 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-300'
-             }`}
-           >
-             {isLoading ? (
-               <span className="text-xs font-bold px-1">STOP</span>
-             ) : (
-               <span className="text-xl">↑</span>
-             )}
-           </button>
-
+          <button
+            type="submit"
+            disabled={!isLoading && (!input.trim())}
+            onClick={(e) => {
+              if (isLoading) {
+                e.preventDefault();
+                onStopGenerating();
+              }
+            }}
+            className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all flex items-center justify-center ${
+              isLoading 
+                ? 'bg-red-500 text-white hover:bg-red-600' 
+                : 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-300'
+            }`}
+          >
+            {isLoading ? (
+              /* Modern Stop Square Icon */
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <rect x="6" y="6" width="12" height="12" rx="2" />
+              </svg>
+            ) : (
+              <span className="text-xl">↑</span>
+            )}
+          </button>
         </form>
         <p className="text-center text-[10px] text-gray-400 mt-3">
           AI can make mistakes. Check important info.

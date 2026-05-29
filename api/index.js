@@ -57,7 +57,23 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
-// Utility: Extracts JSON content from AI responses, handling potential markdown blocks or reasoning text
+// Utility: Extracts JSON content and reasoning from AI responses
+function extractAIResponse(text) {
+  // 1. Try to extract content between <thought> and <final> tags
+  const thoughtMatch = text.match(/<thought>([\s\S]*?)<\/thought>/);
+  const finalMatch = text.match(/<final>([\s\S]*?)<\/final>/);
+  
+  let thought = thoughtMatch ? thoughtMatch[1].trim() : '';
+  let jsonPart = finalMatch ? finalMatch[1].trim() : text;
+
+  // If no <final> tag was found, we use the robust JSON extraction on the whole text
+  if (!finalMatch) {
+    jsonPart = cleanJsonResponse(text);
+  }
+
+  return { thought, jsonPart };
+}
+
 function cleanJsonResponse(text) {
   // 1. Try to extract content from a ```json block (Highest priority)
   const jsonBlockMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
@@ -72,8 +88,7 @@ function cleanJsonResponse(text) {
   }
 
   // 3. Advanced Extraction for Reasoning Models:
-  // Reasoning models often output multiple JSON blocks (e.g., {thought: ...} {type: ...}).
-  // We look for the LAST valid JSON object in the text.
+  // Find the LAST valid JSON object in the text to avoid capturing thoughts
   const braceMatches = [];
   let stack = [];
   for (let i = 0; i < text.length; i++) {
@@ -86,17 +101,13 @@ function cleanJsonResponse(text) {
   }
 
   if (braceMatches.length > 0) {
-    // Sort by start position descending to check the last object first
     braceMatches.sort((a, b) => b.start - a.start);
-    
     for (const match of braceMatches) {
       const candidate = text.substring(match.start, match.end);
       try {
         JSON.parse(candidate);
-        return candidate; // Return the first valid JSON object found starting from the end
-      } catch (e) {
-        // Not valid JSON, try the next one
-      }
+        return candidate; 
+      } catch (e) {}
     }
   }
 
@@ -106,10 +117,9 @@ function cleanJsonResponse(text) {
   if (firstBrace === -1 || lastBrace === -1) return text.trim();
   return text.substring(firstBrace, lastBrace + 1);
 }
- 
+
 // Root endpoint for health check
 app.get('/', (req, res) => {
-
   res.send('AI Tutor API is running on Vercel!');
 });
 
@@ -124,12 +134,16 @@ app.post(['/api/chat', '/chat'], limiter, verifyToken, async (req, res) => {
     // Process the request using the AI logic defined in ai.js
     const aiResponse = await handleChat(message, history || []);
     
-    // Clean the AI response to ensure it's a valid JSON string
-    const cleanedResponse = cleanJsonResponse(aiResponse);
+    // Extract both the thought process and the final JSON response
+    const { thought, jsonPart } = extractAIResponse(aiResponse);
     
     try {
-      const parsed = JSON.parse(cleanedResponse);
-      res.json(parsed);
+      const parsed = JSON.parse(jsonPart);
+      // Return both the thought and the parsed AI response
+      res.json({
+        thought,
+        ...parsed
+      });
     } catch (parseError) {
       console.error('JSON Parse Error:', parseError);
       res.status(500).json({ error: 'AI response format error' });
