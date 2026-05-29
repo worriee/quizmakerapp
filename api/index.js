@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 import { handleChat } from './ai.js';
 
 const app = express();
+app.set('trust proxy', 1);
 
 // Supabase Client for Backend Verification
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
