@@ -57,23 +57,7 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
-// Utility: Extracts JSON content and reasoning from AI responses
-function extractAIResponse(text) {
-  // 1. Try to extract content between <thought> and <final> tags
-  const thoughtMatch = text.match(/<thought>([\s\S]*?)<\/thought>/);
-  const finalMatch = text.match(/<final>([\s\S]*?)<\/final>/);
-  
-  let thought = thoughtMatch ? thoughtMatch[1].trim() : '';
-  let jsonPart = finalMatch ? finalMatch[1].trim() : text;
-
-  // If no <final> tag was found, we use the robust JSON extraction on the whole text
-  if (!finalMatch) {
-    jsonPart = cleanJsonResponse(text);
-  }
-
-  return { thought, jsonPart };
-}
-
+// Utility: Extracts JSON content from AI responses
 function cleanJsonResponse(text) {
   // 1. Try to extract content from a ```json block (Highest priority)
   const jsonBlockMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
@@ -132,21 +116,27 @@ app.post(['/api/chat', '/chat'], limiter, verifyToken, async (req, res) => {
     }
     
     // Process the request using the AI logic defined in ai.js
-    const aiResponse = await handleChat(message, history || []);
+    const rawAIResponse = await handleChat(message, history || []);
     
-    // Extract both the thought process and the final JSON response
-    const { thought, jsonPart } = extractAIResponse(aiResponse);
+    // Extract the JSON part for processing, but we will send the raw text to the frontend
+    const cleanedResponse = cleanJsonResponse(rawAIResponse);
     
     try {
-      const parsed = JSON.parse(jsonPart);
-      // Return both the thought and the parsed AI response
+      const parsed = JSON.parse(cleanedResponse);
+      // Send the raw response (containing <thought> and <final>) 
+      // and the parsed data for the UI to use for special components (like quizzes)
       res.json({
-        thought,
+        raw: rawAIResponse,
         ...parsed
       });
     } catch (parseError) {
       console.error('JSON Parse Error:', parseError);
-      res.status(500).json({ error: 'AI response format error' });
+      // If parsing fails, we still send the raw response so the user sees something
+      res.json({
+        raw: rawAIResponse,
+        type: 'text',
+        text: rawAIResponse
+      });
     }
   } catch (error) {
     console.error('General Error in /api/chat:', error);
