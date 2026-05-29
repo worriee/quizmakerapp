@@ -30,7 +30,9 @@ const renderRawAIOutput = (text) => {
  */
 const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStopGenerating }) => {
   const [input, setInput] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const scrollRef = useRef(null);
+  const textareaRef = useRef(null);
   // State to track which reasoning blocks are expanded/collapsed
   const [expandedThoughts, setExpandedThoughts] = useState({});
 
@@ -42,10 +44,34 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
-    onSendMessage(input);
+    if ((!input.trim() && selectedFiles.length === 0) || isLoading) return;
+    onSendMessage(input, selectedFiles);
     setInput('');
+    setSelectedFiles([]);
   };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    setSelectedFiles(prev => [...prev, ...files]);
+  };
+
+  const removeFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [input]);
 
   const toggleThought = (idx) => {
     setExpandedThoughts(prev => ({
@@ -165,11 +191,25 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
                   </div>
                 )}
 
-                {msg.role === 'user' && (
-                  <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed break-words">
-                    {msg.text}
-                  </div>
-                )}
+                 {msg.role === 'user' && (
+                   <div className="space-y-2">
+                     <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed break-words">
+                       {msg.text}
+                     </div>
+                     {msg.files && msg.files.length > 0 && (
+                       <div className="flex flex-wrap gap-2 pt-2">
+                         {msg.files.map((fileName, fIdx) => (
+                           <div key={fIdx} className="flex items-center gap-1 px-2 py-1 bg-white/50 text-gray-600 text-[10px] font-medium rounded-md border border-gray-200">
+                             <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                             </svg>
+                             <span className="truncate max-w-[100px]">{fileName}</span>
+                           </div>
+                         ))}
+                       </div>
+                     )}
+                   </div>
+                 )}
 
                 {msg.type === 'notes' && (
                   <div className="mt-6 flex justify-end">
@@ -177,7 +217,7 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
                       onClick={onStartQuiz}
                       className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-all shadow-sm flex items-center gap-2"
                     >
-                      <span>📝</span> Start Mock Quiz based on these notes
+                      <span>📝</span> Start Mock Quiz
                     </button>
                   </div>
                 )}
@@ -202,45 +242,73 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
         )}
       </div>
 
-      <div className="p-4 md:p-8 bg-gradient-to-t from-white via-white to-transparent">
-        <form 
-          onSubmit={handleSubmit}
-          className="max-w-3xl mx-auto relative group"
-        >
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Message AI Tutor..."
-            className="w-full px-6 py-4 pr-16 rounded-2xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none shadow-sm transition-all bg-white"
-            disabled={isLoading}
-          />
-          <button
-            type="submit"
-            disabled={!isLoading && (!input.trim())}
-            onClick={(e) => {
-              if (isLoading) {
-                e.preventDefault();
-                onStopGenerating();
-              }
-            }}
-            className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all flex items-center justify-center ${
-              isLoading 
-                ? 'bg-red-500 text-white hover:bg-red-600' 
-                : 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-300'
-            }`}
-          >
-            {isLoading ? (
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <rect x="6" y="6" width="12" height="12" rx="2" />
-              </svg>
-            ) : (
-              <span className="text-xl">↑</span>
-            )}
-          </button>
-        </form>
+       <div className="p-4 md:p-8 bg-gradient-to-t from-white via-white to-transparent">
+         <form 
+           onSubmit={handleSubmit}
+           className="max-w-3xl mx-auto relative group"
+         >
+           {selectedFiles.length > 0 && (
+             <div className="flex flex-wrap gap-2 mb-3">
+               {selectedFiles.map((file, idx) => (
+                 <div key={idx} className="flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-medium rounded-full border border-indigo-100 animate-in zoom-in-95 duration-200">
+                   <span className="truncate max-w-[150px]">{file.name}</span>
+                   <button type="button" onClick={() => removeFile(idx)} className="hover:text-indigo-800">
+                     <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                       <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                     </svg>
+                   </button>
+                 </div>
+               ))}
+             </div>
+           )}
+           
+           <div className="relative flex items-end gap-2">
+             <label className="cursor-pointer p-3 rounded-xl border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 hover:text-indigo-600 transition-all shadow-sm">
+               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+               </svg>
+               <input type="file" multiple onChange={handleFileChange} className="hidden" />
+             </label>
+             
+             <div className="relative flex-1">
+               <textarea
+                 ref={textareaRef}
+                 value={input}
+                 onChange={(e) => setInput(e.target.value)}
+                 onKeyDown={handleKeyDown}
+                 placeholder="Start a topic..."
+                 rows="1"
+                 className="w-full px-6 py-4 pr-16 rounded-2xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none shadow-sm transition-all bg-white resize-none min-h-[56px] max-h-[200px] overflow-y-auto"
+                 disabled={isLoading}
+               />
+               <button
+                 type="submit"
+                 disabled={!isLoading && (!input.trim() && selectedFiles.length === 0)}
+                 onClick={(e) => {
+                   if (isLoading) {
+                     e.preventDefault();
+                     onStopGenerating();
+                   }
+                 }}
+                 className={`absolute right-3 bottom-3 p-2 rounded-xl transition-all flex items-center justify-center ${
+                   isLoading 
+                     ? 'bg-red-500 text-white hover:bg-red-600' 
+                     : 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-300'
+                 }`}
+               >
+                 {isLoading ? (
+                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                     <rect x="6" y="6" width="12" height="12" rx="2" />
+                   </svg>
+                 ) : (
+                   <span className="text-xl">↑</span>
+                 )}
+               </button>
+             </div>
+           </div>
+         </form>
         <p className="text-center text-[10px] text-gray-400 mt-3">
-          <span className="font-semibold text-indigo-600">Studying + Cheating = Perfection.</span>
+          <span className="font-semibold">Studying + Cheating = Perfection.</span>
           <br />
           <span>-Julry</span>
         </p>

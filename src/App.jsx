@@ -91,8 +91,41 @@ function App() {
     }
   }, [session, currentSessionId, fetchSessions]);
 
-  const handleSendMessage = useCallback(async (text) => {
-    const userMsg = { role: 'user', text, type: 'text' };
+  const fileToBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = error => reject(error);
+  });
+
+  const processFiles = async (files) => {
+    const parts = [];
+    for (const file of files) {
+      if (file.type.startsWith('image/') || file.type === 'application/pdf') {
+        const base64 = await fileToBase64(file);
+        parts.push({
+          inlineData: {
+            mimeType: file.type,
+            data: base64
+          }
+        });
+      } else {
+        const text = await file.text();
+        parts.push({
+          text: `\n[File: ${file.name}]\n${text}\n`
+        });
+      }
+    }
+    return parts;
+  };
+
+  const handleSendMessage = useCallback(async (text, files = []) => {
+    const userMsg = { 
+      role: 'user', 
+      text: text || (files.length > 0 ? `Uploaded ${files.length} file(s)` : ''), 
+      type: 'text',
+      files: files.map(f => f.name)
+    };
     setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);
 
@@ -100,6 +133,10 @@ function App() {
     setAbortController(controller);
 
     try {
+      const fileParts = await processFiles(files);
+      const messageParts = text ? [{ text }] : [];
+      const allParts = [...messageParts, ...fileParts];
+
       const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: {
@@ -108,7 +145,7 @@ function App() {
         },
         signal: controller.signal,
         body: JSON.stringify({
-          message: text,
+          message: allParts,
           history: history,
         }),
       });
@@ -125,13 +162,9 @@ function App() {
         ...data 
       }]);
 
-      // Immediately stop loading after the response is received and added to UI
-      setIsLoading(false);
-      setAbortController(null);
-
       const updatedHistory = [
         ...history,
-        { role: 'user', parts: [{ text }] },
+        { role: 'user', parts: allParts },
         { role: 'model', parts: [{ text: JSON.stringify(data) }] },
       ];
       setHistory(updatedHistory);
