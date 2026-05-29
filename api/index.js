@@ -29,7 +29,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 // Middleware: Validates the Supabase JWT provided in the Authorization header
 const verifyToken = async (req, res, next) => {

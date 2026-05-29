@@ -82,11 +82,12 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
 
   return (
     <div className="flex flex-col h-full bg-white">
-      <div 
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6"
-      >
-        {messages.length === 0 ? (
+       <div 
+         ref={scrollRef}
+         className="flex-1 overflow-y-auto p-4 md:p-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+       >
+         <div className="max-w-3xl mx-auto w-full space-y-6">
+           {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50">
             <div className="text-5xl">✨</div>
             <h2 className="text-2xl font-semibold text-gray-700">How can I help you learn today?</h2>
@@ -131,9 +132,9 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
                           </div>
                         </div>
                         {expandedThoughts[idx] && (
-                          <div className="mt-2 p-3 text-sm text-gray-500 italic leading-relaxed bg-gray-50 rounded-b-lg border-x border-b border-gray-100 break-words max-h-48 overflow-y-auto">
-                            {msg.raw.match(/<thought>([\s\S]*?)<\/thought>/)?.[1] || ''}
-                          </div>
+                           <div className="mt-2 p-3 text-sm text-gray-500 italic leading-relaxed bg-gray-50 rounded-b-lg border-x border-b border-gray-100 break-words max-h-48 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                             {msg.raw.match(/<thought>([\s\S]*?)<\/thought>/)?.[1] || ''}
+                           </div>
                         )}
                       </div>
                     )}
@@ -226,21 +227,22 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
           ))
         )}
 
-        {isLoading && (
-          <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="max-w-[85%] md:max-w-2xl p-4 rounded-2xl bg-white border border-gray-200 text-gray-800 rounded-tl-none shadow-sm">
-              <div className="flex items-center gap-3 text-gray-500">
-                <span className="text-sm font-medium italic">Thinking</span>
-                <div className="flex gap-1">
-                  <div className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                  <div className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                  <div className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+         {isLoading && (
+           <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
+             <div className="max-w-[85%] md:max-w-2xl p-4 rounded-2xl bg-white border border-gray-200 text-gray-800 rounded-tl-none shadow-sm">
+               <div className="flex items-center gap-3 text-gray-500">
+                 <span className="text-sm font-medium italic">Thinking</span>
+                 <div className="flex gap-1">
+                   <div className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                   <div className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                   <div className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce"></div>
+                 </div>
+               </div>
+             </div>
+           </div>
+         )}
+         </div>
+       </div>
 
        <div className="p-4 md:p-8 bg-gradient-to-t from-white via-white to-transparent">
          <form 
