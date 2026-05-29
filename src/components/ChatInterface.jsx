@@ -84,7 +84,7 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
                   <>
                     {/* Reasoning Process: Minimized by default */}
                     {msg.raw.includes('<thought>') && (
-                      <div className={`mb-4 transition-all duration-200 overflow-hidden ${expandedThoughts[idx] ? 'max-h-[1000px] opacity-100' : 'max-h-10 opacity-80'}`}>
+                      <div className={`mb-4 transition-all duration-200 overflow-hidden ${expandedThoughts[idx] ? 'max-h-64 opacity-100' : 'max-h-10 opacity-80'}`}>
                         <div 
                           onClick={() => toggleThought(idx)}
                           className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors group"
@@ -105,7 +105,7 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
                           </div>
                         </div>
                         {expandedThoughts[idx] && (
-                          <div className="mt-2 p-3 text-sm text-gray-500 italic leading-relaxed bg-gray-50 rounded-b-lg border-x border-b border-gray-100 break-words">
+                          <div className="mt-2 p-3 text-sm text-gray-500 italic leading-relaxed bg-gray-50 rounded-b-lg border-x border-b border-gray-100 break-words max-h-48 overflow-y-auto">
                             {msg.raw.match(/<thought>([\s\S]*?)<\/thought>/)?.[1] || ''}
                           </div>
                         )}
