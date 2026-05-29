@@ -3,9 +3,27 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 /**
- * ChatInterface Component: The primary user interface for interacting with the AI.
- * Handles message rendering, markdown parsing, and the input form.
+ * Helper to render the AI raw output with separators for <final> tags.
+ * Defined outside the component to prevent unnecessary re-creations.
  */
+const renderRawAIOutput = (text) => {
+  if (!text) return null;
+
+  const processedText = text
+    .replace(/<thought>/g, '💭 **Reasoning:**\n')
+    .replace(/<\/thought>/g, '\n---')
+    .replace(/<final>/g, '🎯 **Final Response:**\n')
+    .replace(/<\/final>/g, '\n---');
+
+  return (
+    <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed whitespace-pre-wrap">
+      <ReactMarkdown remarkGfm>
+        {processedText}
+      </ReactMarkdown>
+    </div>
+  );
+};
+
 const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStopGenerating }) => {
   const [input, setInput] = useState('');
   const scrollRef = useRef(null);
@@ -21,26 +39,6 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
     if (!input.trim() || isLoading) return;
     onSendMessage(input);
     setInput('');
-  };
-
-  // Utility to render the AI raw output with separators for <final> tags
-  const renderRawAIOutput = (text) => {
-    if (!text) return null;
-
-    // Replace <final> and </final> with visual separators and markers
-    const processedText = text
-      .replace(/<thought>/g, '💭 **Reasoning:**\n')
-      .replace(/<\/thought>/g, '\n---')
-      .replace(/<final>/g, '🎯 **Final Response:**\n')
-      .replace(/<\/final>/g, '\n---');
-
-    return (
-      <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed whitespace-pre-wrap">
-        <ReactMarkdown remarkGfm>
-          {processedText}
-        </ReactMarkdown>
-      </div>
-    );
   };
 
   return (
@@ -69,12 +67,10 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
                   : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none shadow-sm'
               }`}>
                 
-                {/* Special AI output rendering (Thinking + Final) */}
                 {msg.role === 'model' && msg.raw && (
                   <>
                     {renderRawAIOutput(msg.raw)}
                     
-                    {/* If the output is a quiz, we still show the interactive quiz UI below the raw text */}
                     {msg.type === 'quiz' && (
                       <div className="mt-6 pt-6 border-t border-gray-100 space-y-4">
                         <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 uppercase tracking-wider mb-2">
@@ -114,10 +110,9 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
                   </>
                 )}
 
-                {/* Fallback for messages without raw text */}
                 {msg.role === 'model' && !msg.raw && msg.type !== 'quiz' && (
                   <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    <ReactMarkdown remarkGfm>
                       {msg.text}
                     </ReactMarkdown>
                   </div>
@@ -129,14 +124,13 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
                   </div>
                 )}
 
-                {/* Special Action Button: Trigger Quiz generation after notes are presented */}
                 {msg.type === 'notes' && (
                   <div className="mt-6 flex justify-end">
                     <button 
                       onClick={onStartQuiz}
                       className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-all shadow-sm flex items-center gap-2"
                     >
-                      <span>📝</span> Start Mock Quiz
+                      <span>📝</span> Start Mock Quiz based on these notes
                     </button>
                   </div>
                 )}
@@ -145,7 +139,6 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
           ))
         )}
 
-        {/* Thinking Animation Placeholder */}
         {isLoading && (
           <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="max-w-[85%] md:max-w-2xl p-4 rounded-2xl bg-white border border-gray-200 text-gray-800 rounded-tl-none shadow-sm">
@@ -200,7 +193,7 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
           </button>
         </form>
         <p className="text-center text-[10px] text-gray-400 mt-3">
-          <span className="font-semibold text-indigo-600">Studying + Cheating = Perfection.</span> <br>-Julry</br>
+          <span className="font-semibold text-indigo-600">Studying + Cheating = Perfection.</span> -Julry
         </p>
       </div>
     </div>

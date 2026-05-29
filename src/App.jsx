@@ -1,16 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import MainLayout from './components/MainLayout';
 import ChatInterface from './components/ChatInterface';
 import Login from './components/Login';
 import { supabase } from './supabaseClient';
 
-// Base URL for backend serverless functions
 const API_BASE_URL = '/api';
 
-/**
- * App Component: The root of the application.
- * Manages authentication state, session persistence, and the core chat logic.
- */
 function App() {
   const [session, setSession] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -21,17 +16,24 @@ function App() {
   const [abortController, setAbortController] = useState(null);
 
   useEffect(() => {
-
-    // Initial session check on load
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
     });
 
-    // Listen for auth state changes (Sign in, Sign out, Token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       if (session) {
-        await fetchSessions(session.user.id);
+        // We call fetchSessions directly here to avoid dependency issues
+        try {
+          const { data, error } = await supabase
+            .from('chat_sessions')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .order('created_at', { ascending: false });
+          if (!error) setSessions(data || []);
+        } catch (e) {
+          console.error('Auth change session fetch error:', e);
+        }
       } else {
         setSessions([]);
       }
@@ -40,8 +42,7 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Retrieves a list of previous chat sessions for the current user
-  const fetchSessions = async (userId) => {
+  const fetchSessions = useCallback(async (userId) => {
     try {
       const { data, error } = await supabase
         .from('chat_sessions')
@@ -54,26 +55,22 @@ function App() {
     } catch (error) {
       console.error('Error fetching sessions:', error);
     }
-  };
+  }, []);
 
-  // Handles user logout
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
-  };
+  }, []);
 
-  // Persists chat history to the Supabase database
-  const saveSessionToDb = async (updatedHistory, topic) => {
+  const saveSessionToDb = useCallback(async (updatedHistory, topic) => {
     if (!session) return;
 
     try {
       if (currentSessionId) {
-        // Update existing record if a session is already active
         await supabase
           .from('chat_sessions')
           .update({ history: updatedHistory, topic })
           .eq('id', currentSessionId);
       } else {
-        // Create a new record for a brand new chat
         const { data, error } = await supabase
           .from('chat_sessions')
           .insert([
@@ -87,16 +84,14 @@ function App() {
 
         if (error) throw error;
         setCurrentSessionId(data[0].id);
-        // Refresh list to show the new session in sidebar
         await fetchSessions(session.user.id);
       }
     } catch (error) {
       console.error('Error saving session:', error);
     }
-  };
+  }, [session, currentSessionId, fetchSessions]);
 
-  // Main function to send a message to the AI backend
-  const handleSendMessage = async (text) => {
+  const handleSendMessage = useCallback(async (text) => {
     const userMsg = { role: 'user', text, type: 'text' };
     setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);
@@ -154,9 +149,9 @@ function App() {
       setIsLoading(false);
       setAbortController(null);
     }
-  };
+  }, [session, history, messages, sessions, currentSessionId, saveSessionToDb]);
 
-  const handleStartQuiz = async () => {
+  const handleStartQuiz = useCallback(async () => {
     setIsLoading(true);
     
     const controller = new AbortController();
@@ -212,25 +207,23 @@ function App() {
       setIsLoading(false);
       setAbortController(null);
     }
-  };
+  }, [session, history, sessions, currentSessionId, saveSessionToDb]);
 
-  const stopGenerating = () => {
+  const stopGenerating = useCallback(() => {
     if (abortController) {
       abortController.abort();
       setIsLoading(false);
       setAbortController(null);
     }
-  };
+  }, [abortController]);
 
-  const handleNewChat = () => {
-
+  const handleNewChat = useCallback(() => {
     setMessages([]);
     setHistory([]);
     setCurrentSessionId(null);
-  };
+  }, []);
 
-  // Loads a specific session's history from the database
-  const handleLoadSession = async (sessionId) => {
+  const handleLoadSession = useCallback(async (sessionId) => {
     try {
       const { data, error } = await supabase
         .from('chat_sessions')
@@ -243,7 +236,6 @@ function App() {
       setCurrentSessionId(sessionId);
       setHistory(data.history);
       
-      // Transform stored AI history (JSON strings) back into UI message objects
       const loadedMessages = data.history.map(item => {
         if (item.role === 'model') {
           try {
@@ -264,7 +256,7 @@ function App() {
     } catch (error) {
       console.error('Error loading session:', error);
     }
-  };
+  }, []);
 
   return (
     <>
