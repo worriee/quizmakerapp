@@ -125,6 +125,10 @@ function App() {
         ...data 
       }]);
 
+      // Immediately stop loading after the response is received and added to UI
+      setIsLoading(false);
+      setAbortController(null);
+
       const updatedHistory = [
         ...history,
         { role: 'user', parts: [{ text }] },
@@ -133,7 +137,8 @@ function App() {
       setHistory(updatedHistory);
       
       const topic = messages.length === 0 ? text : sessions.find(s => s.id === currentSessionId)?.topic || 'Chat';
-      await saveSessionToDb(updatedHistory, topic);
+      // Save to DB in the background without blocking the UI
+      saveSessionToDb(updatedHistory, topic).catch(e => console.error('Background save failed:', e));
     } catch (error) {
       if (error.name === 'AbortError') {
         console.log('Request aborted by user');
@@ -183,6 +188,10 @@ function App() {
         ...data 
       }]);
 
+      // Immediately stop loading
+      setIsLoading(false);
+      setAbortController(null);
+
       const updatedHistory = [
         ...history,
         { role: 'user', parts: [{ text: 'Start a mock quiz based on the notes provided above.' }] },
@@ -191,7 +200,8 @@ function App() {
       setHistory(updatedHistory);
       
       const topic = sessions.find(s => s.id === currentSessionId)?.topic || 'Quiz Session';
-      await saveSessionToDb(updatedHistory, topic);
+      // Save to DB in the background
+      saveSessionToDb(updatedHistory, topic).catch(e => console.error('Background save failed:', e));
     } catch (error) {
       if (error.name === 'AbortError') {
         console.log('Request aborted by user');
