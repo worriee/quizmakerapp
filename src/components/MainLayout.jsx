@@ -46,7 +46,7 @@ const MainLayout = ({ children, onNewChat }) => {
           >
             <span className="text-xl">☰</span>
           </button>
-          <span className="ml-4 font-semibold">AI Tutor Assistant</span>
+          <span className="ml-4 font-semibold">Quiz Maker</span>
         </div>
         
         <div className="flex-1 overflow-hidden">

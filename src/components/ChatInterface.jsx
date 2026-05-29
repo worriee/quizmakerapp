@@ -240,7 +240,8 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
           </button>
         </form>
         <p className="text-center text-[10px] text-gray-400 mt-3">
-          <span className="font-semibold text-indigo-600">Studying + Cheating = Perfection.</span> -Julry
+          <span className="font-semibold text-indigo-600">Studying + Cheating = Perfection.</span>
+          <span>-Julry</span>
         </p>
       </div>
     </div>
