@@ -5,6 +5,7 @@ import Login from './components/Login';
 import { supabase } from './supabaseClient';
 
 const API_BASE_URL = '/api';
+const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB limit to stay under Vercel's 4.5MB limit after base64 encoding
 
 function App() {
   const [session, setSession] = useState(null);
@@ -120,6 +121,14 @@ function App() {
   };
 
   const handleSendMessage = useCallback(async (text, files = []) => {
+    // Validate file sizes before proceeding
+    for (const file of files) {
+      if (file.size > MAX_FILE_SIZE) {
+        alert(`File ${file.name} is too large. Maximum size is 3MB.`);
+        return;
+      }
+    }
+
     const userMsg = { 
       role: 'user', 
       text: text || (files.length > 0 ? `Uploaded ${files.length} file(s)` : ''), 
@@ -133,22 +142,28 @@ function App() {
     setAbortController(controller);
 
     try {
+      // Ensure we have the freshest session token to avoid 401 errors
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession) {
+        throw new Error('Your session has expired. Please log in again.');
+      }
+
       const fileParts = await processFiles(files);
       const messageParts = text ? [{ text }] : [];
       const allParts = [...messageParts, ...fileParts];
 
-      const response = await fetch(`${API_BASE_URL}/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        signal: controller.signal,
-        body: JSON.stringify({
-          message: allParts,
-          history: history,
-        }),
-      });
+       const response = await fetch(`${API_BASE_URL}/chat`, {
+         method: 'POST',
+         headers: {
+           'Content-Type': 'application/json',
+           'Authorization': `Bearer ${currentSession.access_token}`
+         },
+         signal: controller.signal,
+         body: JSON.stringify({
+           message: allParts,
+           history: history,
+         }),
+       });
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -196,11 +211,17 @@ function App() {
     setAbortController(controller);
 
     try {
+      // Ensure we have the freshest session token to avoid 401 errors
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession) {
+        throw new Error('Your session has expired. Please log in again.');
+      }
+
       const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
+          'Authorization': `Bearer ${currentSession.access_token}`
         },
         signal: controller.signal,
         body: JSON.stringify({
