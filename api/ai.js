@@ -94,7 +94,7 @@ export async function handleChat(message, history) {
         const response = await result.response;
         return response.text();
       })(),
-      timeoutPromise(25000)
+       timeoutPromise(15000)
     ]);
     
     return responseText;
