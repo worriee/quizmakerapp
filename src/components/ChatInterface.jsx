@@ -264,8 +264,8 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
              </div>
            )}
            
-           <div className="relative flex items-end gap-2">
-             <label className="cursor-pointer p-3 rounded-xl border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 hover:text-indigo-600 transition-all shadow-sm">
+            <div className="relative flex items-center gap-2">
+              <label className="cursor-pointer p-3 rounded-xl border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 hover:text-indigo-600 transition-all shadow-sm">
                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                </svg>
@@ -278,10 +278,10 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
                  value={input}
                  onChange={(e) => setInput(e.target.value)}
                  onKeyDown={handleKeyDown}
-                 placeholder="Start a topic..."
-                 rows="1"
-                 className="w-full px-6 py-4 pr-16 rounded-2xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none shadow-sm transition-all bg-white resize-none min-h-[56px] max-h-[200px] overflow-y-auto"
-                 disabled={isLoading}
+                  placeholder="Start a topic..."
+                  rows="1"
+                  className="w-full px-6 py-4 pr-16 rounded-2xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none shadow-sm transition-all bg-white resize-none min-h-[56px] max-h-[200px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                  disabled={isLoading}
                />
                <button
                  type="submit"
