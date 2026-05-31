@@ -140,6 +140,12 @@ app.post(['/api/chat', '/chat'], limiter, verifyToken, async (req, res) => {
     }
   } catch (error) {
     console.error('General Error in /api/chat:', error);
+    
+    // Check if this is the specific timeout error from ai.js
+    if (error.message && error.message.includes("taking too long to respond")) {
+      return res.status(504).json({ error: error.message });
+    }
+    
     res.status(500).json({ error: 'An internal server error occurred' });
   }
 });

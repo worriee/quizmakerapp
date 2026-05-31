@@ -60,6 +60,13 @@ TUTORING GUIDELINES:
  * @param {string} message - The current user input.
  * @param {Array} history - The previous messages in the chat session.
  */
+/**
+ * timeoutPromise: A helper that rejects after a specified number of milliseconds.
+ */
+const timeoutPromise = (ms) => new Promise((_, reject) => 
+  setTimeout(() => reject(new Error("AI_TIMEOUT")), ms)
+);
+
 export async function handleChat(message, history) {
   // Initialize the model instance
   const model = genAI.getGenerativeModel({ model: "gemma-4-26b-a4b-it" });
@@ -79,8 +86,22 @@ export async function handleChat(message, history) {
     ],
   });
 
-  // Send the user message and retrieve the text response from the AI
-  const result = await chat.sendMessage(message);
-  const response = await result.response;
-  return response.text();
+  try {
+    // Race the AI request against a 25-second timeout
+    const responseText = await Promise.race([
+      (async () => {
+        const result = await chat.sendMessage(message);
+        const response = await result.response;
+        return response.text();
+      })(),
+      timeoutPromise(25000)
+    ]);
+    
+    return responseText;
+  } catch (error) {
+    if (error.message === "AI_TIMEOUT") {
+      throw new Error("The AI is taking too long to respond. Please try again.");
+    }
+    throw error;
+  }
 }
