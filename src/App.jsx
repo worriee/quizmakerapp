@@ -5,7 +5,6 @@ import Login from './components/Login';
 import { supabase } from './supabaseClient';
 
 const API_BASE_URL = '/api';
-const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB limit to stay under Vercel's 4.5MB limit after base64 encoding
 
 function App() {
   const [session, setSession] = useState(null);
@@ -92,48 +91,11 @@ function App() {
     }
   }, [session, currentSessionId, fetchSessions]);
 
-  const fileToBase64 = (file) => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = error => reject(error);
-  });
-
-  const processFiles = async (files) => {
-    const parts = [];
-    for (const file of files) {
-      if (file.type.startsWith('image/') || file.type === 'application/pdf') {
-        const base64 = await fileToBase64(file);
-        parts.push({
-          inlineData: {
-            mimeType: file.type,
-            data: base64
-          }
-        });
-      } else {
-        const text = await file.text();
-        parts.push({
-          text: `\n[File: ${file.name}]\n${text}\n`
-        });
-      }
-    }
-    return parts;
-  };
-
-  const handleSendMessage = useCallback(async (text, files = []) => {
-    // Validate file sizes before proceeding
-    for (const file of files) {
-      if (file.size > MAX_FILE_SIZE) {
-        alert(`File ${file.name} is too large. Maximum size is 3MB.`);
-        return;
-      }
-    }
-
+  const handleSendMessage = useCallback(async (text) => {
     const userMsg = { 
       role: 'user', 
-      text: text || (files.length > 0 ? `Uploaded ${files.length} file(s)` : ''), 
+      text: text, 
       type: 'text',
-      files: files.map(f => f.name)
     };
     setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);
@@ -148,22 +110,18 @@ function App() {
         throw new Error('Your session has expired. Please log in again.');
       }
 
-      const fileParts = await processFiles(files);
-      const messageParts = text ? [{ text }] : [];
-      const allParts = [...messageParts, ...fileParts];
-
-       const response = await fetch(`${API_BASE_URL}/chat`, {
-         method: 'POST',
-         headers: {
-           'Content-Type': 'application/json',
-           'Authorization': `Bearer ${currentSession.access_token}`
-         },
-         signal: controller.signal,
-         body: JSON.stringify({
-           message: allParts,
-           history: history,
-         }),
-       });
+        const response = await fetch(`${API_BASE_URL}/chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentSession.access_token}`
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            message: text,
+            history: history,
+          }),
+        });
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -177,11 +135,11 @@ function App() {
         ...data 
       }]);
 
-      const updatedHistory = [
-        ...history,
-        { role: 'user', parts: allParts },
-        { role: 'model', parts: [{ text: JSON.stringify(data) }] },
-      ];
+       const updatedHistory = [
+         ...history,
+         { role: 'user', parts: [{ text }] },
+         { role: 'model', parts: [{ text: JSON.stringify(data) }] },
+       ];
       setHistory(updatedHistory);
       
       const topic = messages.length === 0 ? text : sessions.find(s => s.id === currentSessionId)?.topic || 'Chat';
