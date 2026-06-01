@@ -1,163 +1,40 @@
 import express from 'express';
-import cors from 'cors';
-import 'dotenv/config';
-import rateLimit from 'express-rate-limit';
-import { createClient } from '@supabase/supabase-js';
 import { handleChat } from './ai.js';
 
 const app = express();
+app.use(express.json());
 
-// Trust the first proxy (Vercel) to get the correct client IP for rate limiting
-app.set('trust proxy', 1);
+/**
+ * POST /api/chat
+ * Handles incoming chat messages and returns the raw AI response.
+ * The backend now acts as a "dumb pipe," simply passing the AI's raw output
+ * (including <thought> and <final> tags) back to the frontend for parsing.
+ */
+app.post('/api/chat', async (req, res) => {
+  console.log('[Server] Received chat request');
+  const { message, history } = req.body;
 
-// Initialize Supabase client for server-side JWT verification
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-
-// Rate Limiting: Prevent API abuse by limiting requests per IP
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // Limit each IP to 20 requests per window
-  message: { error: 'Too many requests, please try again later.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// CORS Configuration: Restrict API access to the trusted frontend domain
-const corsOptions = {
-  origin: process.env.ALLOWED_ORIGIN || '*', // Use environment variable for production URL
-  optionsSuccessStatus: 200
-};
-
-app.use(cors(corsOptions));
-app.use(express.json({ limit: '1mb' }));
-
-// Middleware: Validates the Supabase JWT provided in the Authorization header
-const verifyToken = async (req, res, next) => {
-  console.log('[Backend] verifyToken middleware started');
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.log('[Backend] verifyToken failed: Missing or invalid token');
-    return res.status(401).json({ error: 'Authentication token is missing' });
+  if (!message) {
+    console.error('[Server] No message provided');
+    return res.status(400).json({ error: 'Message is required' });
   }
 
-  const token = authHeader.split(' ')[1];
   try {
-    console.log('[Backend] Verifying token with Supabase...');
-    // Verify the token with Supabase to ensure the user is authenticated
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (error || !user) {
-      console.log('[Backend] verifyToken failed: Unauthorized');
-      console.error('Supabase getUser error:', error);
-      return res.status(401).json({ error: 'Invalid or expired token' });
-    }
-    
-    console.log('[Backend] verifyToken succeeded for user:', user.id);
-    // Attach the verified user to the request object for later use
-    req.user = user;
-    next();
-  } catch (err) {
-    console.error('JWT Verification Exception:', err);
-    res.status(500).json({ error: 'Internal server error during authentication' });
-  }
-};
-
-// Utility: Extracts JSON content from AI responses
-function cleanJsonResponse(text) {
-  // 1. Try to extract content from a ```json block (Highest priority)
-  const jsonBlockMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
-  if (jsonBlockMatch) {
-    return jsonBlockMatch[1].trim();
-  }
-
-  // 2. Try to extract content from any generic ``` block
-  const genericBlockMatch = text.match(/```\s*([\s\S]*?)\s*```/);
-  if (genericBlockMatch) {
-    return genericBlockMatch[1].trim();
-  }
-
-  // 3. Advanced Extraction for Reasoning Models:
-  // Find the LAST valid JSON object in the text to avoid capturing thoughts
-  const braceMatches = [];
-  let stack = [];
-  for (let i = 0; i < text.length; i++) {
-    if (text[i] === '{') {
-      stack.push(i);
-    } else if (text[i] === '}' && stack.length > 0) {
-      const start = stack.pop();
-      braceMatches.push({ start, end: i + 1 });
-    }
-  }
-
-  if (braceMatches.length > 0) {
-    braceMatches.sort((a, b) => b.start - a.start);
-    for (const match of braceMatches) {
-      const candidate = text.substring(match.start, match.end);
-      try {
-        JSON.parse(candidate);
-        return candidate; 
-      } catch (e) {}
-    }
-  }
-
-  // 4. Fallback: Final attempt using first/last brace
-  const firstBrace = text.indexOf('{');
-  const lastBrace = text.lastIndexOf('}');
-  if (firstBrace === -1 || lastBrace === -1) return text.trim();
-  return text.substring(firstBrace, lastBrace + 1);
-}
-
-// Root endpoint for health check
-app.get('/', (req, res) => {
-  res.send('AI Tutor API is running on Vercel!');
-});
-
-// Main Chat Endpoint: Handles user messages and generates AI responses
-app.post(['/api/chat', '/chat'], limiter, verifyToken, async (req, res) => {
-  console.log('[Backend] Request received at /api/chat');
-  try {
-    const { message, history } = req.body;
-    if (!message) {
-      return res.status(400).json({ error: 'Message is required' });
-    }
-    
-    console.log('[Backend] Calling handleChat logic...');
-    // Process the request using the AI logic defined in ai.js
+    console.log('[Server] Calling handleChat...');
     const rawAIResponse = await handleChat(message, history || []);
-    console.log('[Backend] handleChat returned response');
     
-    // Extract the JSON part for processing, but we will send the raw text to the frontend
-    console.log('[Backend] Cleaning JSON response...');
-    const cleanedResponse = cleanJsonResponse(rawAIResponse);
-    
-    console.log('[Backend] Parsing cleaned JSON...');
-    try {
-      const parsed = JSON.parse(cleanedResponse);
-      // Send the raw response (containing <thought> and <final>) 
-      // and the parsed data for the UI to use for special components (like quizzes)
-      res.json({
-        raw: rawAIResponse,
-        ...parsed
-      });
-    } catch (parseError) {
-      console.error('JSON Parse Error:', parseError);
-      // If parsing fails, we still send the raw response so the user sees something
-      res.json({
-        raw: rawAIResponse,
-        type: 'text',
-        text: rawAIResponse
-      });
-    }
+    console.log('[Server] Sending raw AI response to client');
+    // We return the raw string inside a JSON object.
+    // The frontend will be responsible for extracting <thought> and <final> blocks.
+    res.json({ raw: rawAIResponse });
   } catch (error) {
-    console.error('General Error in /api/chat:', error);
+    console.error('[Server] Internal Server Error:', error);
     
-    // Check if this is the specific timeout error from ai.js
-    if (error.message && error.message.includes("taking too long to respond")) {
-      return res.status(504).json({ error: error.message });
-    }
-    
-    res.status(500).json({ error: 'An internal server error occurred' });
+    // Handle specific error messages from ai.js (like timeouts)
+    const errorMessage = error.message || 'An unexpected error occurred';
+    res.status(500).json({ error: errorMessage });
   }
 });
 
+// Export for Vercel/Serverless environment
 export default app;

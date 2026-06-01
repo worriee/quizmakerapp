@@ -1,82 +1,72 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import "dotenv/config";
 
-// Initialize the Google Generative AI client with the API key from environment variables
+// Initialize the Google Generative AI client
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
-// System Prompt: Defines the AI's persona, rules, and required JSON output formats
+/**
+ * SYSTEM_PROMPT: Defines the AI's persona and the strict output format.
+ * We use <thought> and <final> tags to separate internal reasoning from the user-facing response.
+ */
 const SYSTEM_PROMPT = `
-You are a dual-mode AI Learning Assistant. You can either generate comprehensive study notes or act as an interactive tutor for a mock exam.
+You are a dual-mode AI Learning Assistant. You can generate comprehensive study notes or act as an interactive tutor for a mock exam.
 
 CRITICAL OUTPUT FORMAT:
-You MUST wrap your entire response in the following tags:
+You MUST wrap every single response in these tags:
 <thought>
-[Your internal reasoning, step-by-step analysis, and mode determination go here. Be thorough.]
+[Your internal reasoning, step-by-step analysis, and decision making go here. Explain WHY you are choosing a specific mode or how you are structuring the answer.]
 </thought>
 <final>
-[Your final response as a valid JSON object goes here. Do not include markdown code blocks inside the <final> tags, just the raw JSON.]
+[Your final response to the user goes here.]
 </final>
 
-RESPONSE FORMATS (inside <final>):
-- For NOTE MODE:
-{
-  "type": "notes",
-  "text": "[Detailed, well-structured study notes using markdown...]",
-  "summary": "[A brief 2-sentence overview of the topic]"
-}
+RESPONSE GUIDELINES (Inside <final>):
+1. CHAT MODE (Default): Use plain text for conversational replies.
+2. NOTE MODE: Provide well-structured study notes using markdown. To help the frontend, start your response with a JSON-like header if possible, or simply use a clear structure. 
+   Recommended format for Notes:
+   { "type": "notes", "text": "Markdown content here...", "summary": "Short summary" }
+3. QUIZ MODE: You MUST use JSON format so the frontend can render the quiz interface.
+   Required format:
+   {
+     "type": "quiz",
+     "text": "[The question text]",
+     "options": ["Option A", "Option B", "Option C", "Option D"],
+     "feedback": { "isCorrect": boolean | null, "text": "Feedback text" },
+     "progress": { "current": number, "total": 5 },
+     "isFinished": boolean,
+     "summary": "Final summary"
+   }
 
-- For QUIZ MODE:
-{
-  "type": "quiz",
-  "text": "[The question text here]",
-  "options": ["Option A", "Option B", "Option C", "Option D"],
-  "feedback": {
-    "isCorrect": boolean | null,
-    "text": "[Feedback on the previous answer or null for the first question]"
-  },
-  "progress": {
-    "current": number,
-    "total": 5
-  },
-  "isFinished": boolean,
-  "summary": "[Final performance summary or null]"
-}
-
-- For CHAT MODE:
-{
-  "type": "text",
-  "text": "[Your actual conversational response to the user]"
-}
-
-TUTORING GUIDELINES:
-- In QUIZ MODE, ask one question at a time.
-- Evaluate the user's answer accurately.
-- Provide constructive feedback before moving to the next question.
-- If the user asks for a quiz based on previous notes, use the conversation history to create highly relevant questions.
+TUTORING RULES:
+- In QUIZ MODE, ask only one question at a time.
+- Always provide feedback on the previous answer before moving to the next question.
+- Ensure the <final> tag contains ONLY the response (plain text or JSON), no extra chatter outside the tags.
 `;
 
 /**
- * handleChat: Orchestrates the interaction with the Google AI model.
- * @param {string} message - The current user input.
- * @param {Array} history - The previous messages in the chat session.
- */
-/**
- * timeoutPromise: A helper that rejects after a specified number of milliseconds.
+ * timeoutPromise: Rejects after ms to prevent Vercel timeouts.
  */
 const timeoutPromise = (ms) =>
   new Promise((_, reject) =>
     setTimeout(() => {
-      console.log('[AI] timeoutPromise triggered');
+      console.log('[AI] Request timeout triggered');
       reject(new Error("AI_TIMEOUT"));
     }, ms),
   );
 
+/**
+ * handleChat: Manages the interaction with the Gemini model.
+ * @param {string} message - User input.
+ * @param {Array} history - Chat history.
+ * @returns {Promise<string>} - The raw text response from the AI.
+ */
 export async function handleChat(message, history) {
-  console.log('[AI] handleChat started');
-  // Initialize the model instance
+  console.log('[AI] handleChat called');
+  
+  // Using gemma-4-31b-it as requested
   const model = genAI.getGenerativeModel({ model: "gemma-4-31b-it" });
 
-  // Start a chat session with the SYSTEM_PROMPT as the initial context
+  // Initialize chat with system prompt as the first exchange
   const chat = model.startChat({
     history: [
       {
@@ -85,40 +75,30 @@ export async function handleChat(message, history) {
       },
       {
         role: "model",
-        parts: [
-          {
-            text: "I understand. I will act as a dual-mode AI Learning Assistant and respond only in the specified JSON format.",
-          },
-        ],
+        parts: [{ text: "I understand. I will always wrap my responses in <thought> and <final> tags, using JSON inside <final> for quizzes and notes." }],
       },
       ...history,
     ],
   });
 
   try {
-    console.log('[AI] Starting Promise.race for Gemini request...');
-    // Race the AI request against an 8-second timeout
-    // This must be lower than Vercel's hard limit (10s) to return a clean error
+    console.log('[AI] Sending message to Gemini...');
+    // Race the AI call against an 8s timeout to stay under Vercel's 10s limit
     const responseText = await Promise.race([
       (async () => {
-        console.log('[AI] Calling chat.sendMessage...');
         const result = await chat.sendMessage(message);
-        console.log('[AI] chat.sendMessage returned result');
         const response = await result.response;
-        const text = response.text();
-        console.log('[AI] response.text() extracted');
-        return text;
+        return response.text();
       })(),
       timeoutPromise(8000),
     ]);
 
-    console.log('[AI] Promise.race completed successfully');
+    console.log('[AI] Successfully received response');
     return responseText;
   } catch (error) {
+    console.error('[AI] Error during AI generation:', error);
     if (error.message === "AI_TIMEOUT") {
-      throw new Error(
-        "The AI is taking too long to respond. Please try again.",
-      );
+      throw new Error("The AI is taking too long to respond. Please try again.");
     }
     throw error;
   }

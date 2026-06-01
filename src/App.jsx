@@ -139,18 +139,32 @@ function App() {
          throw new Error(errorMsg);
        }
 
-      const data = await response.json();
-      
-      setMessages(prev => [...prev, { 
-        role: 'model', 
-        ...data 
-      }]);
+       const data = await response.json();
+       const rawResponse = data.raw || '';
+       
+       // Parse raw response for thought and final tags
+       const thoughtMatch = rawResponse.match(/<thought>([\s\S]*?)<\/thought>/);
+       const finalMatch = rawResponse.match(/<final>([\s\S]*?)<\/final>/);
+       
+       const thought = thoughtMatch ? thoughtMatch[1].trim() : '';
+       const final = finalMatch ? finalMatch[1].trim() : '';
+       
+       // Fallback text if <final> isn't used
+       const displayText = final || rawResponse.replace(/<thought>[\s\S]*?<\/thought>/, '').replace(/<final>|<\/final>/g, '').trim();
 
-       const updatedHistory = [
-         ...history,
-         { role: 'user', parts: [{ text }] },
-         { role: 'model', parts: [{ text: JSON.stringify(data) }] },
-       ];
+       setMessages(prev => [...prev, { 
+         role: 'model', 
+         raw: rawResponse,
+         text: displayText,
+         thought: thought,
+         ...data 
+       }]);
+
+        const updatedHistory = [
+          ...history,
+          { role: 'user', parts: [{ text }] },
+          { role: 'model', parts: [{ text: JSON.stringify(data) }] },
+        ];
       setHistory(updatedHistory);
       
       const topic = messages.length === 0 ? text : sessions.find(s => s.id === currentSessionId)?.topic || 'Chat';
@@ -204,14 +218,28 @@ function App() {
         throw new Error(errorData.error || `Server responded with ${response.status}`);
       }
 
-      const data = await response.json();
-      
-      setMessages(prev => [...prev, { 
-        role: 'model', 
-        ...data 
-      }]);
+       const data = await response.json();
+       const rawResponse = data.raw || '';
+       
+       // Parse raw response for thought and final tags
+       const thoughtMatch = rawResponse.match(/<thought>([\s\S]*?)<\/thought>/);
+       const finalMatch = rawResponse.match(/<final>([\s\S]*?)<\/final>/);
+       
+       const thought = thoughtMatch ? thoughtMatch[1].trim() : '';
+       const final = finalMatch ? finalMatch[1].trim() : '';
+       
+       // Fallback text if <final> isn't used
+       const displayText = final || rawResponse.replace(/<thought>[\s\S]*?<\/thought>/, '').replace(/<final>|<\/final>/g, '').trim();
 
-      // Immediately stop loading
+       setMessages(prev => [...prev, { 
+         role: 'model', 
+         raw: rawResponse,
+         text: displayText,
+         thought: thought,
+         ...data 
+       }]);
+
+       // Immediately stop loading
       setIsLoading(false);
       setAbortController(null);
 
