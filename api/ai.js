@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import 'dotenv/config';
+import "dotenv/config";
 
 // Initialize the Google Generative AI client with the API key from environment variables
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
@@ -63,14 +63,15 @@ TUTORING GUIDELINES:
 /**
  * timeoutPromise: A helper that rejects after a specified number of milliseconds.
  */
-const timeoutPromise = (ms) => new Promise((_, reject) => 
-  setTimeout(() => reject(new Error("AI_TIMEOUT")), ms)
-);
+const timeoutPromise = (ms) =>
+  new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("AI_TIMEOUT")), ms),
+  );
 
 export async function handleChat(message, history) {
   // Initialize the model instance
-  const model = genAI.getGenerativeModel({ model: "gemma-4-26b-a4b-it" });
-  
+  const model = genAI.getGenerativeModel({ model: "gemma-4-31b-it" });
+
   // Start a chat session with the SYSTEM_PROMPT as the initial context
   const chat = model.startChat({
     history: [
@@ -80,7 +81,11 @@ export async function handleChat(message, history) {
       },
       {
         role: "model",
-        parts: [{ text: "I understand. I will act as a dual-mode AI Learning Assistant and respond only in the specified JSON format." }],
+        parts: [
+          {
+            text: "I understand. I will act as a dual-mode AI Learning Assistant and respond only in the specified JSON format.",
+          },
+        ],
       },
       ...history,
     ],
@@ -95,13 +100,15 @@ export async function handleChat(message, history) {
         const response = await result.response;
         return response.text();
       })(),
-       timeoutPromise(8000)
+      timeoutPromise(8000),
     ]);
-    
+
     return responseText;
   } catch (error) {
     if (error.message === "AI_TIMEOUT") {
-      throw new Error("The AI is taking too long to respond. Please try again.");
+      throw new Error(
+        "The AI is taking too long to respond. Please try again.",
+      );
     }
     throw error;
   }
