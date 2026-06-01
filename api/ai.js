@@ -65,10 +65,14 @@ TUTORING GUIDELINES:
  */
 const timeoutPromise = (ms) =>
   new Promise((_, reject) =>
-    setTimeout(() => reject(new Error("AI_TIMEOUT")), ms),
+    setTimeout(() => {
+      console.log('[AI] timeoutPromise triggered');
+      reject(new Error("AI_TIMEOUT"));
+    }, ms),
   );
 
 export async function handleChat(message, history) {
+  console.log('[AI] handleChat started');
   // Initialize the model instance
   const model = genAI.getGenerativeModel({ model: "gemma-4-31b-it" });
 
@@ -92,17 +96,23 @@ export async function handleChat(message, history) {
   });
 
   try {
+    console.log('[AI] Starting Promise.race for Gemini request...');
     // Race the AI request against an 8-second timeout
     // This must be lower than Vercel's hard limit (10s) to return a clean error
     const responseText = await Promise.race([
       (async () => {
+        console.log('[AI] Calling chat.sendMessage...');
         const result = await chat.sendMessage(message);
+        console.log('[AI] chat.sendMessage returned result');
         const response = await result.response;
-        return response.text();
+        const text = response.text();
+        console.log('[AI] response.text() extracted');
+        return text;
       })(),
       timeoutPromise(8000),
     ]);
 
+    console.log('[AI] Promise.race completed successfully');
     return responseText;
   } catch (error) {
     if (error.message === "AI_TIMEOUT") {

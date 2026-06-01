@@ -33,21 +33,26 @@ app.use(express.json({ limit: '1mb' }));
 
 // Middleware: Validates the Supabase JWT provided in the Authorization header
 const verifyToken = async (req, res, next) => {
+  console.log('[Backend] verifyToken middleware started');
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('[Backend] verifyToken failed: Missing or invalid token');
     return res.status(401).json({ error: 'Authentication token is missing' });
   }
 
   const token = authHeader.split(' ')[1];
   try {
+    console.log('[Backend] Verifying token with Supabase...');
     // Verify the token with Supabase to ensure the user is authenticated
     const { data: { user }, error } = await supabase.auth.getUser(token);
     if (error || !user) {
+      console.log('[Backend] verifyToken failed: Unauthorized');
       console.error('Supabase getUser error:', error);
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
     
+    console.log('[Backend] verifyToken succeeded for user:', user.id);
     // Attach the verified user to the request object for later use
     req.user = user;
     next();
@@ -109,18 +114,23 @@ app.get('/', (req, res) => {
 
 // Main Chat Endpoint: Handles user messages and generates AI responses
 app.post(['/api/chat', '/chat'], limiter, verifyToken, async (req, res) => {
+  console.log('[Backend] Request received at /api/chat');
   try {
     const { message, history } = req.body;
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
     
+    console.log('[Backend] Calling handleChat logic...');
     // Process the request using the AI logic defined in ai.js
     const rawAIResponse = await handleChat(message, history || []);
+    console.log('[Backend] handleChat returned response');
     
     // Extract the JSON part for processing, but we will send the raw text to the frontend
+    console.log('[Backend] Cleaning JSON response...');
     const cleanedResponse = cleanJsonResponse(rawAIResponse);
     
+    console.log('[Backend] Parsing cleaned JSON...');
     try {
       const parsed = JSON.parse(cleanedResponse);
       // Send the raw response (containing <thought> and <final>) 

@@ -104,12 +104,17 @@ function App() {
     setAbortController(controller);
 
     try {
+      console.log('[Frontend] Starting request flow...');
       // Ensure we have the freshest session token to avoid 401 errors
+      console.log('[Frontend] Fetching Supabase session...');
       const { data: { session: currentSession } } = await supabase.auth.getSession();
+      console.log('[Frontend] Session retrieved:', currentSession?.user?.id);
+      
       if (!currentSession) {
         throw new Error('Your session has expired. Please log in again.');
       }
 
+      console.log('[Frontend] Sending fetch request to /api/chat...');
         const response = await fetch(`${API_BASE_URL}/chat`, {
           method: 'POST',
           headers: {
