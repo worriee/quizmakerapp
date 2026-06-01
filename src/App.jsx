@@ -123,10 +123,16 @@ function App() {
           }),
         });
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Server responded with ${response.status}`);
-      }
+       if (!response.ok) {
+         const errorText = await response.text();
+         console.error(`Server Error ${response.status}:`, errorText);
+         let errorMsg = `Server responded with ${response.status}`;
+         try {
+           const errorData = JSON.parse(errorText);
+           errorMsg = errorData.error || errorMsg;
+         } catch (e) {}
+         throw new Error(errorMsg);
+       }
 
       const data = await response.json();
       
