@@ -87,14 +87,14 @@ export async function handleChat(message, history) {
 
   try {
     console.log("[AI] Sending message to Gemini...");
-    // Race the AI call against an 8s timeout to stay under Vercel's 10s limit
+    // Race the AI call against a 15s timeout to allow more time for complex responses
     const responseText = await Promise.race([
       (async () => {
         const result = await chat.sendMessage(message);
         const response = await result.response;
         return response.text();
       })(),
-      timeoutPromise(8000),
+      timeoutPromise(15000),
     ]);
 
     console.log("[AI] Successfully received response");
