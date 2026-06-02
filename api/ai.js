@@ -49,7 +49,7 @@ TUTORING RULES:
 const timeoutPromise = (ms) =>
   new Promise((_, reject) =>
     setTimeout(() => {
-      console.log('[AI] Request timeout triggered');
+      console.log("[AI] Request timeout triggered");
       reject(new Error("AI_TIMEOUT"));
     }, ms),
   );
@@ -61,10 +61,10 @@ const timeoutPromise = (ms) =>
  * @returns {Promise<string>} - The raw text response from the AI.
  */
 export async function handleChat(message, history) {
-  console.log('[AI] handleChat called');
-  
+  console.log("[AI] handleChat called");
+
   // Using gemma-4-31b-it as requested
-  const model = genAI.getGenerativeModel({ model: "gemma-4-31b-it" });
+  const model = genAI.getGenerativeModel({ model: "gemma-4-26b-a4b-it" });
 
   // Initialize chat with system prompt as the first exchange
   const chat = model.startChat({
@@ -75,14 +75,18 @@ export async function handleChat(message, history) {
       },
       {
         role: "model",
-        parts: [{ text: "I understand. I will always wrap my responses in <thought> and <final> tags, using JSON inside <final> for quizzes and notes." }],
+        parts: [
+          {
+            text: "I understand. I will always wrap my responses in <thought> and <final> tags, using JSON inside <final> for quizzes and notes.",
+          },
+        ],
       },
       ...history,
     ],
   });
 
   try {
-    console.log('[AI] Sending message to Gemini...');
+    console.log("[AI] Sending message to Gemini...");
     // Race the AI call against an 8s timeout to stay under Vercel's 10s limit
     const responseText = await Promise.race([
       (async () => {
@@ -93,12 +97,14 @@ export async function handleChat(message, history) {
       timeoutPromise(8000),
     ]);
 
-    console.log('[AI] Successfully received response');
+    console.log("[AI] Successfully received response");
     return responseText;
   } catch (error) {
-    console.error('[AI] Error during AI generation:', error);
+    console.error("[AI] Error during AI generation:", error);
     if (error.message === "AI_TIMEOUT") {
-      throw new Error("The AI is taking too long to respond. Please try again.");
+      throw new Error(
+        "The AI is taking too long to respond. Please try again.",
+      );
     }
     throw error;
   }
