@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import MainLayout from './components/MainLayout';
-import ChatInterface from './components/ChatInterface';
-import Login from './components/Login';
-import { supabase } from './supabaseClient';
+import React, { useState, useEffect, useCallback } from "react";
+import MainLayout from "./components/MainLayout";
+import ChatInterface from "./components/ChatInterface";
+import Login from "./components/Login";
+import { supabase } from "./supabaseClient";
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = "/api";
 
 function App() {
   const [session, setSession] = useState(null);
@@ -20,19 +20,21 @@ function App() {
       setSession(session);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       if (session) {
         // We call fetchSessions directly here to avoid dependency issues
         try {
           const { data, error } = await supabase
-            .from('chat_sessions')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .order('created_at', { ascending: false });
+            .from("chat_sessions")
+            .select("*")
+            .eq("user_id", session.user.id)
+            .order("created_at", { ascending: false });
           if (!error) setSessions(data || []);
         } catch (e) {
-          console.error('Auth change session fetch error:', e);
+          console.error("Auth change session fetch error:", e);
         }
       } else {
         setSessions([]);
@@ -45,15 +47,15 @@ function App() {
   const fetchSessions = useCallback(async (userId) => {
     try {
       const { data, error } = await supabase
-        .from('chat_sessions')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+        .from("chat_sessions")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setSessions(data || []);
     } catch (error) {
-      console.error('Error fetching sessions:', error);
+      console.error("Error fetching sessions:", error);
     }
   }, []);
 
@@ -61,65 +63,71 @@ function App() {
     await supabase.auth.signOut();
   }, []);
 
-  const saveSessionToDb = useCallback(async (updatedHistory, topic) => {
-    if (!session) return;
+  const saveSessionToDb = useCallback(
+    async (updatedHistory, topic) => {
+      if (!session) return;
 
-    try {
-      if (currentSessionId) {
-        await supabase
-          .from('chat_sessions')
-          .update({ history: updatedHistory, topic })
-          .eq('id', currentSessionId);
-      } else {
-        const { data, error } = await supabase
-          .from('chat_sessions')
-          .insert([
-            {
-              user_id: session.user.id,
-              topic: topic || 'New Chat',
-              history: updatedHistory
-            }
-          ])
-          .select();
+      try {
+        if (currentSessionId) {
+          await supabase
+            .from("chat_sessions")
+            .update({ history: updatedHistory, topic })
+            .eq("id", currentSessionId);
+        } else {
+          const { data, error } = await supabase
+            .from("chat_sessions")
+            .insert([
+              {
+                user_id: session.user.id,
+                topic: topic || "New Chat",
+                history: updatedHistory,
+              },
+            ])
+            .select();
 
-        if (error) throw error;
-        setCurrentSessionId(data[0].id);
-        await fetchSessions(session.user.id);
+          if (error) throw error;
+          setCurrentSessionId(data[0].id);
+          await fetchSessions(session.user.id);
+        }
+      } catch (error) {
+        console.error("Error saving session:", error);
       }
-    } catch (error) {
-      console.error('Error saving session:', error);
-    }
-  }, [session, currentSessionId, fetchSessions]);
+    },
+    [session, currentSessionId, fetchSessions],
+  );
 
-  const handleSendMessage = useCallback(async (text) => {
-    const userMsg = { 
-      role: 'user', 
-      text: text, 
-      type: 'text',
-    };
-    setMessages(prev => [...prev, userMsg]);
-    setIsLoading(true);
+  const handleSendMessage = useCallback(
+    async (text) => {
+      const userMsg = {
+        role: "user",
+        text: text,
+        type: "text",
+      };
+      setMessages((prev) => [...prev, userMsg]);
+      setIsLoading(true);
 
-    const controller = new AbortController();
-    setAbortController(controller);
+      const controller = new AbortController();
+      setAbortController(controller);
 
-    try {
-      console.log('[Frontend] Starting request flow...');
-      // Ensure we have the freshest session token to avoid 401 errors
-      console.log('[Frontend] Fetching Supabase session...');
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      console.log('[Frontend] Session retrieved:', currentSession?.user?.id);
-      
-      if (!currentSession) {
-        throw new Error('Your session has expired. Please log in again.');
-      }
+      try {
+        console.log("[Frontend] Starting request flow...");
+        // Ensure we have the freshest session token to avoid 401 errors
+        console.log("[Frontend] Fetching Supabase session...");
+        const {
+          data: { session: currentSession },
+        } = await supabase.auth.getSession();
+        console.log("[Frontend] Session retrieved:", currentSession?.user?.id);
 
-      console.log('[Frontend] Sending fetch request to /api/chat...');
+        if (!currentSession) {
+          throw new Error("Your session has expired. Please log in again.");
+        }
+
+        console.log("[Frontend] Sending fetch request to /api/chat...");
         const response = await fetch(`${API_BASE_URL}/chat`, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${currentSession.access_token}`
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${currentSession.access_token}`,
           },
           signal: controller.signal,
           body: JSON.stringify({
@@ -127,142 +135,194 @@ function App() {
             history: history,
           }),
         });
-      
-       if (!response.ok) {
-         const errorText = await response.text();
-         console.error(`Server Error ${response.status}:`, errorText);
-         let errorMsg = `Server responded with ${response.status}`;
-         try {
-           const errorData = JSON.parse(errorText);
-           errorMsg = errorData.error || errorMsg;
-         } catch (e) {}
-         throw new Error(errorMsg);
-       }
 
-       const data = await response.json();
-       const rawResponse = data.raw || '';
-       
-       // Parse raw response for thought and final tags
-       const thoughtMatch = rawResponse.match(/<thought>([\s\S]*?)<\/thought>/);
-       const finalMatch = rawResponse.match(/<final>([\s\S]*?)<\/final>/);
-       
-       const thought = thoughtMatch ? thoughtMatch[1].trim() : '';
-       const final = finalMatch ? finalMatch[1].trim() : '';
-       
-       // Fallback text if <final> isn't used
-       const displayText = final || rawResponse.replace(/<thought>[\s\S]*?<\/thought>/, '').replace(/<final>|<\/final>/g, '').trim();
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Server Error ${response.status}:`, errorText);
+          let errorMsg = `Server responded with ${response.status}`;
+          try {
+            const errorData = JSON.parse(errorText);
+            errorMsg = errorData.error || errorMsg;
+          } catch (e) {}
+          throw new Error(errorMsg);
+        }
 
-       setMessages(prev => [...prev, { 
-         role: 'model', 
-         raw: rawResponse,
-         text: displayText,
-         thought: thought,
-         ...data 
-       }]);
+        const data = await response.json();
+        const rawResponse = data.raw || "";
+
+        // Parse raw response for thought and final tags
+        const thoughtMatch = rawResponse.match(
+          /<thought>([\s\S]*?)<\/thought>/,
+        );
+        const finalMatch = rawResponse.match(/<final>([\s\S]*?)<\/final>/);
+
+        const thought = thoughtMatch ? thoughtMatch[1].trim() : "";
+        const final = finalMatch ? finalMatch[1].trim() : "";
+
+        // If <final> is present, use it. Otherwise, remove <thought> block and tags.
+        const displayText = final
+          ? final
+          : rawResponse
+              .replace(/<thought>[\s\S]*?<\/thought>/g, "")
+              .replace(/<final>|<\/final>/g, "")
+              .trim();
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "model",
+            raw: rawResponse,
+            text: displayText,
+            thought: thought,
+            ...data,
+          },
+        ]);
 
         const updatedHistory = [
           ...history,
-          { role: 'user', parts: [{ text }] },
-          { role: 'model', parts: [{ text: JSON.stringify(data) }] },
+          { role: "user", parts: [{ text }] },
+          { role: "model", parts: [{ text: JSON.stringify(data) }] },
         ];
-      setHistory(updatedHistory);
-      
-      const topic = messages.length === 0 ? text : sessions.find(s => s.id === currentSessionId)?.topic || 'Chat';
-      // Save to DB in the background without blocking the UI
-      saveSessionToDb(updatedHistory, topic).catch(e => console.error('Background save failed:', e));
-    } catch (error) {
-      if (error.name === 'AbortError') {
-        console.log('Request aborted by user');
-      } else {
-        console.error('Error sending message:', error);
-        setMessages(prev => [...prev, { 
-          role: 'model', 
-          text: `Error: ${error.message}`, 
-          type: 'text' 
-        }]);
+        setHistory(updatedHistory);
+
+        const topic =
+          messages.length === 0
+            ? text
+            : sessions.find((s) => s.id === currentSessionId)?.topic || "Chat";
+        // Save to DB in the background without blocking the UI
+        saveSessionToDb(updatedHistory, topic).catch((e) =>
+          console.error("Background save failed:", e),
+        );
+      } catch (error) {
+        if (error.name === "AbortError") {
+          console.log("Request aborted by user");
+        } else {
+          console.error("Error sending message:", error);
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "model",
+              text: `Error: ${error.message}`,
+              type: "text",
+            },
+          ]);
+        }
+      } finally {
+        setIsLoading(false);
+        setAbortController(null);
       }
-    } finally {
-      setIsLoading(false);
-      setAbortController(null);
-    }
-  }, [session, history, messages, sessions, currentSessionId, saveSessionToDb]);
+    },
+    [session, history, messages, sessions, currentSessionId, saveSessionToDb],
+  );
 
   const handleStartQuiz = useCallback(async () => {
     setIsLoading(true);
-    
+
     const controller = new AbortController();
     setAbortController(controller);
 
     try {
       // Ensure we have the freshest session token to avoid 401 errors
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      let {
+        data: { session: currentSession },
+      } = await supabase.auth.getSession();
+
       if (!currentSession) {
-        throw new Error('Your session has expired. Please log in again.');
+        console.log("[Frontend] No session found, attempting to recover...");
+        const { data: recovery } = await supabase.auth.getSession();
+        currentSession = recovery?.session;
+      }
+
+      if (!currentSession) {
+        setSession(null);
+        throw new Error("Your session has expired. Please log in again.");
       }
 
       const response = await fetch(`${API_BASE_URL}/chat`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${currentSession.access_token}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${currentSession.access_token}`,
         },
         signal: controller.signal,
         body: JSON.stringify({
-          message: 'Now, start a mock quiz based on the notes provided above.',
-          history: history
+          message: "Now, start a mock quiz based on the notes provided above.",
+          history: history,
         }),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Server responded with ${response.status}`);
+        throw new Error(
+          errorData.error || `Server responded with ${response.status}`,
+        );
       }
 
-       const data = await response.json();
-       const rawResponse = data.raw || '';
-       
-       // Parse raw response for thought and final tags
-       const thoughtMatch = rawResponse.match(/<thought>([\s\S]*?)<\/thought>/);
-       const finalMatch = rawResponse.match(/<final>([\s\S]*?)<\/final>/);
-       
-       const thought = thoughtMatch ? thoughtMatch[1].trim() : '';
-       const final = finalMatch ? finalMatch[1].trim() : '';
-       
-       // Fallback text if <final> isn't used
-       const displayText = final || rawResponse.replace(/<thought>[\s\S]*?<\/thought>/, '').replace(/<final>|<\/final>/g, '').trim();
+      const data = await response.json();
+      const rawResponse = data.raw || "";
 
-       setMessages(prev => [...prev, { 
-         role: 'model', 
-         raw: rawResponse,
-         text: displayText,
-         thought: thought,
-         ...data 
-       }]);
+      // Parse raw response for thought and final tags
+      const thoughtMatch = rawResponse.match(/<thought>([\s\S]*?)<\/thought>/);
+      const finalMatch = rawResponse.match(/<final>([\s\S]*?)<\/final>/);
 
-       // Immediately stop loading
+      const thought = thoughtMatch ? thoughtMatch[1].trim() : "";
+      const final = finalMatch ? finalMatch[1].trim() : "";
+
+      // If <final> is present, use it. Otherwise, remove <thought> block and tags.
+      const displayText = final
+        ? final
+        : rawResponse
+            .replace(/<thought>[\s\S]*?<\/thought>/g, "")
+            .replace(/<final>|<\/final>/g, "")
+            .trim();
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "model",
+          raw: rawResponse,
+          text: displayText,
+          thought: thought,
+          ...data,
+        },
+      ]);
+
+      // Immediately stop loading
       setIsLoading(false);
       setAbortController(null);
 
       const updatedHistory = [
         ...history,
-        { role: 'user', parts: [{ text: 'Start a mock quiz based on the notes provided above.' }] },
-        { role: 'model', parts: [{ text: JSON.stringify(data) }] },
+        {
+          role: "user",
+          parts: [
+            { text: "Start a mock quiz based on the notes provided above." },
+          ],
+        },
+        { role: "model", parts: [{ text: JSON.stringify(data) }] },
       ];
       setHistory(updatedHistory);
-      
-      const topic = sessions.find(s => s.id === currentSessionId)?.topic || 'Quiz Session';
+
+      const topic =
+        sessions.find((s) => s.id === currentSessionId)?.topic ||
+        "Quiz Session";
       // Save to DB in the background
-      saveSessionToDb(updatedHistory, topic).catch(e => console.error('Background save failed:', e));
+      saveSessionToDb(updatedHistory, topic).catch((e) =>
+        console.error("Background save failed:", e),
+      );
     } catch (error) {
-      if (error.name === 'AbortError') {
-        console.log('Request aborted by user');
+      if (error.name === "AbortError") {
+        console.log("Request aborted by user");
       } else {
-        console.error('Error starting quiz:', error);
-        setMessages(prev => [...prev, { 
-          role: 'model', 
-          text: `Error: ${error.message}`, 
-          type: 'text' 
-        }]);
+        console.error("Error starting quiz:", error);
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "model",
+            text: `Error: ${error.message}`,
+            type: "text",
+          },
+        ]);
       }
     } finally {
       setIsLoading(false);
@@ -287,35 +347,35 @@ function App() {
   const handleLoadSession = useCallback(async (sessionId) => {
     try {
       const { data, error } = await supabase
-        .from('chat_sessions')
-        .select('*')
-        .eq('id', sessionId)
+        .from("chat_sessions")
+        .select("*")
+        .eq("id", sessionId)
         .single();
 
       if (error) throw error;
 
       setCurrentSessionId(sessionId);
       setHistory(data.history);
-      
-      const loadedMessages = data.history.map(item => {
-        if (item.role === 'model') {
+
+      const loadedMessages = data.history.map((item) => {
+        if (item.role === "model") {
           try {
             const parsed = JSON.parse(item.parts[0].text);
             return {
-              role: 'model',
+              role: "model",
               ...parsed,
-              text: parsed.text || parsed.question?.text || 'AI Response'
+              text: parsed.text || parsed.question?.text || "AI Response",
             };
           } catch {
-            return { role: 'model', text: item.parts[0].text, type: 'text' };
+            return { role: "model", text: item.parts[0].text, type: "text" };
           }
         }
-        return { role: 'user', text: item.parts[0].text, type: 'text' };
+        return { role: "user", text: item.parts[0].text, type: "text" };
       });
-      
+
       setMessages(loadedMessages);
     } catch (error) {
-      console.error('Error loading session:', error);
+      console.error("Error loading session:", error);
     }
   }, []);
 
