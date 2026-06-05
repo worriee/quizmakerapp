@@ -11,13 +11,13 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const SYSTEM_PROMPT = `
 You are a dual-mode AI Learning Assistant. You can generate comprehensive study notes or act as an interactive tutor for a mock exam.
 
-CRITICAL OUTPUT FORMAT:
-You MUST wrap every single response in these tags:
+CRITICAL OUTPUT FORMAT (MANDATORY):
+You MUST wrap every single response in these tags. Failure to do so will result in a system error.
 <thought>
 [Your internal reasoning, step-by-step analysis, and decision making go here. Explain WHY you are choosing a specific mode or how you are structuring the answer.]
 </thought>
 <final>
-[Your final response to the user goes here.]
+[Your final response to the user goes here. If you are in Note Mode or Quiz Mode, the content inside <final> MUST be a valid JSON string.]
 </final>
 
 RESPONSE GUIDELINES (Inside <final>):
@@ -62,42 +62,47 @@ const timeoutPromise = (ms) =>
  */
 export async function handleChat(message, history) {
   console.log("[AI] handleChat called");
-
-  // Using gemma-4-31b-it as requested
-  const model = genAI.getGenerativeModel({ model: "gemma-4-26b-a4b-it" });
-
-  // Initialize chat with system prompt as the first exchange
-  const chat = model.startChat({
-    history: [
-      {
-        role: "user",
-        parts: [{ text: SYSTEM_PROMPT }],
-      },
-      {
-        role: "model",
-        parts: [
-          {
-            text: "I understand. I will always wrap my responses in <thought> and <final> tags, using JSON inside <final> for quizzes and notes.",
-          },
-        ],
-      },
-      ...history,
-    ],
+ 
+  const model = genAI.getGenerativeModel({ 
+    model: "gemini-3.1-flash-lite",
+    systemInstruction: SYSTEM_PROMPT,
   });
-
+ 
+  // Construct the conversation history for generateContent
+  // Note: SYSTEM_PROMPT is handled by systemInstruction, so we only send the history and the current message
+  const contents = [
+    ...history,
+    {
+      role: "user",
+      parts: [{ text: message }],
+    },
+  ];
+ 
+  console.log(`[AI] Sending request to Gemini with ${contents.length} turns`);
+ 
   try {
-    console.log("[AI] Sending message to Gemini...");
-    // Race the AI call against a 15s timeout to allow more time for complex responses
+    console.log("[AI] Calling generateContent...");
     const responseText = await Promise.race([
       (async () => {
-        const result = await chat.sendMessage(message);
+        const result = await model.generateContent({ contents });
         const response = await result.response;
+        
+        // Log finish reason to diagnose safety blocks or other stops
+        console.log("[AI] Gemini finish reason:", response.candidates[0]?.finishReason);
+        
         return response.text();
       })(),
-      timeoutPromise(15000),
+      timeoutPromise(30000),
     ]);
-
-    console.log("[AI] Successfully received response");
+ 
+    console.log("[AI] Successfully received response from Gemini");
+    
+    if (!responseText || responseText.trim().length === 0) {
+      console.warn("[AI] Gemini returned an empty response.");
+      return "<thought>The AI returned an empty response. This can happen due to safety filters or unexpected model behavior.</thought><final>I'm sorry, I encountered an issue generating a response. Please try rephrasing your prompt or starting a new chat.</final>";
+    }
+    
+    console.log("[AI] Response length:", responseText?.length || 0);
     return responseText;
   } catch (error) {
     console.error("[AI] Error during AI generation:", error);

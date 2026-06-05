@@ -143,10 +143,10 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStop
                           <span>Question {msg.progress?.current} of {msg.progress?.total}</span>
                         </div>
                         
-                        {msg.feedback && (
+                        {msg.feedback && msg.feedback.isCorrect !== null && (
                           <div className={`p-3 rounded-lg mb-4 text-sm ${
-                            msg.feedback.isCorrect 
-                              ? 'bg-green-50 text-green-800 border border-green-100' 
+                            msg.feedback.isCorrect
+                              ? 'bg-green-50 text-green-800 border border-green-100'
                               : 'bg-red-50 text-red-800 border border-red-100'
                           }`}>
                             <p className="font-bold mb-1">{msg.feedback.isCorrect ? '✅ Correct!' : '❌ Not quite'}</p>

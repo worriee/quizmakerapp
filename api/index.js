@@ -13,6 +13,8 @@ app.use(express.json());
 app.post('/api/chat', async (req, res) => {
   console.log('[Server] Received chat request');
   const { message, history } = req.body;
+  console.log('[Server] Message:', message);
+  console.log('[Server] History Length:', history?.length || 0);
 
   if (!message) {
     console.error('[Server] No message provided');
@@ -22,10 +24,9 @@ app.post('/api/chat', async (req, res) => {
   try {
     console.log('[Server] Calling handleChat...');
     const rawAIResponse = await handleChat(message, history || []);
+    console.log('[Server] handleChat returned successfully');
     
     console.log('[Server] Sending raw AI response to client');
-    // We return the raw string inside a JSON object.
-    // The frontend will be responsible for extracting <thought> and <final> blocks.
     res.json({ raw: rawAIResponse });
   } catch (error) {
     console.error('[Server] Internal Server Error:', error);

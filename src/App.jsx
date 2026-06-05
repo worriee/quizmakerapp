@@ -3,6 +3,7 @@ import MainLayout from "./components/MainLayout";
 import ChatInterface from "./components/ChatInterface";
 import Login from "./components/Login";
 import { supabase } from "./supabaseClient";
+import { parseAIResponse } from "./utils/aiParser";
 
 const API_BASE_URL = "/api";
 
@@ -109,14 +110,40 @@ function App() {
       const controller = new AbortController();
       setAbortController(controller);
 
+      const timeoutId = setTimeout(() => {
+        console.log("[Frontend] Request timeout reached. Aborting...");
+        controller.abort();
+      }, 45000);
+
       try {
         console.log("[Frontend] Starting request flow...");
         // Ensure we have the freshest session token to avoid 401 errors
-        console.log("[Frontend] Fetching Supabase session...");
-        const {
-          data: { session: currentSession },
-        } = await supabase.auth.getSession();
-        console.log("[Frontend] Session retrieved:", currentSession?.user?.id);
+        console.log("[Frontend] Checking session state...");
+        let currentSession = session;
+
+        if (!currentSession) {
+          console.log("[Frontend] Session state empty, fetching from Supabase...");
+          const getSessionWithTimeout = async (timeoutMs = 5000) => {
+            const timeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error("SUPABASE_SESSION_TIMEOUT")), timeoutMs)
+            );
+            return Promise.race([
+              supabase.auth.getSession(),
+              timeoutPromise
+            ]);
+          };
+
+          try {
+            const { data: { session: fetchedSession } } = await getSessionWithTimeout();
+            currentSession = fetchedSession;
+            console.log("[Frontend] Session retrieved from Supabase:", currentSession?.user?.id);
+          } catch (e) {
+            console.error("[Frontend] Session retrieval failed or timed out:", e);
+            throw e;
+          }
+        } else {
+          console.log("[Frontend] Using existing session state for user:", currentSession.user.id);
+        }
 
         if (!currentSession) {
           throw new Error("Your session has expired. Please log in again.");
@@ -150,30 +177,18 @@ function App() {
         const data = await response.json();
         const rawResponse = data.raw || "";
 
-        // Parse raw response for thought and final tags
-        const thoughtMatch = rawResponse.match(
-          /<thought>([\s\S]*?)<\/thought>/,
-        );
-        const finalMatch = rawResponse.match(/<final>([\s\S]*?)<\/final>/);
-
-        const thought = thoughtMatch ? thoughtMatch[1].trim() : "";
-        const final = finalMatch ? finalMatch[1].trim() : "";
-
-        // If <final> is present, use it. Otherwise, remove <thought> block and tags.
-        const displayText = final
-          ? final
-          : rawResponse
-              .replace(/<thought>[\s\S]*?<\/thought>/g, "")
-              .replace(/<final>|<\/final>/g, "")
-              .trim();
+        // Use centralized parser for consistent results
+        const { thought, final, structured } = parseAIResponse(rawResponse);
+        const displayText = structured.text || final;
 
         setMessages((prev) => [
           ...prev,
           {
             role: "model",
             raw: rawResponse,
-            text: displayText,
+            text: structured.text || displayText,
             thought: thought,
+            ...structured,
             ...data,
           },
         ]);
@@ -181,7 +196,7 @@ function App() {
         const updatedHistory = [
           ...history,
           { role: "user", parts: [{ text }] },
-          { role: "model", parts: [{ text: JSON.stringify(data) }] },
+          { role: "model", parts: [{ text: rawResponse }] },
         ];
         setHistory(updatedHistory);
 
@@ -208,6 +223,7 @@ function App() {
           ]);
         }
       } finally {
+        console.log("[Frontend] Request flow finished. Setting isLoading to false.");
         setIsLoading(false);
         setAbortController(null);
       }
@@ -221,11 +237,34 @@ function App() {
     const controller = new AbortController();
     setAbortController(controller);
 
+    const timeoutId = setTimeout(() => {
+      console.log("[Frontend] Request timeout reached. Aborting...");
+      controller.abort();
+    }, 45000);
+
     try {
       // Ensure we have the freshest session token to avoid 401 errors
-      let {
-        data: { session: currentSession },
-      } = await supabase.auth.getSession();
+      let currentSession = session;
+
+      if (!currentSession) {
+        const getSessionWithTimeout = async (timeoutMs = 5000) => {
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("SUPABASE_SESSION_TIMEOUT")), timeoutMs)
+          );
+          return Promise.race([
+            supabase.auth.getSession(),
+            timeoutPromise
+          ]);
+        };
+
+        try {
+          const { data: { session: fetchedSession } } = await getSessionWithTimeout();
+          currentSession = fetchedSession;
+        } catch (e) {
+          console.error("[Frontend] Session retrieval failed in handleStartQuiz:", e);
+          throw e;
+        }
+      }
 
       if (!currentSession) {
         console.log("[Frontend] No session found, attempting to recover...");
@@ -261,20 +300,9 @@ function App() {
       const data = await response.json();
       const rawResponse = data.raw || "";
 
-      // Parse raw response for thought and final tags
-      const thoughtMatch = rawResponse.match(/<thought>([\s\S]*?)<\/thought>/);
-      const finalMatch = rawResponse.match(/<final>([\s\S]*?)<\/final>/);
-
-      const thought = thoughtMatch ? thoughtMatch[1].trim() : "";
-      const final = finalMatch ? finalMatch[1].trim() : "";
-
-      // If <final> is present, use it. Otherwise, remove <thought> block and tags.
-      const displayText = final
-        ? final
-        : rawResponse
-            .replace(/<thought>[\s\S]*?<\/thought>/g, "")
-            .replace(/<final>|<\/final>/g, "")
-            .trim();
+      // Use centralized parser for consistent results
+      const { thought, final, structured } = parseAIResponse(rawResponse);
+      const displayText = structured.text || final;
 
       setMessages((prev) => [
         ...prev,
@@ -283,6 +311,7 @@ function App() {
           raw: rawResponse,
           text: displayText,
           thought: thought,
+          ...structured,
           ...data,
         },
       ]);
@@ -299,7 +328,7 @@ function App() {
             { text: "Start a mock quiz based on the notes provided above." },
           ],
         },
-        { role: "model", parts: [{ text: JSON.stringify(data) }] },
+        { role: "model", parts: [{ text: rawResponse }] },
       ];
       setHistory(updatedHistory);
 
@@ -325,6 +354,7 @@ function App() {
         ]);
       }
     } finally {
+      console.log("[Frontend] Quiz request flow finished. Setting isLoading to false.");
       setIsLoading(false);
       setAbortController(null);
     }
