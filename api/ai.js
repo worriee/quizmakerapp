@@ -13,6 +13,9 @@ You are a dual-mode AI Learning Assistant. You can generate comprehensive study 
 
 CRITICAL OUTPUT FORMAT (MANDATORY):
 You MUST wrap every single response in these tags. Failure to do so will result in a system error.
+
+If this is the first response of a new session (no previous AI messages in history), you MUST also provide a concise, catchy title for the session wrapped in <title> tags (e.g., <title>Exploring Quantum Physics</title>). This title should appear before the <thought> tag.
+
 <thought>
 [Your internal reasoning, step-by-step analysis, and decision making go here. Explain WHY you are choosing a specific mode or how you are structuring the answer.]
 </thought>
@@ -61,15 +64,11 @@ const timeoutPromise = (ms) =>
  * @returns {Promise<string>} - The raw text response from the AI.
  */
 export async function handleChat(message, history) {
-  console.log("[AI] handleChat called");
- 
-  const model = genAI.getGenerativeModel({ 
+  const model = genAI.getGenerativeModel({
     model: "gemini-3.1-flash-lite",
     systemInstruction: SYSTEM_PROMPT,
   });
- 
-  // Construct the conversation history for generateContent
-  // Note: SYSTEM_PROMPT is handled by systemInstruction, so we only send the history and the current message
+  
   const contents = [
     ...history,
     {
@@ -77,32 +76,21 @@ export async function handleChat(message, history) {
       parts: [{ text: message }],
     },
   ];
- 
-  console.log(`[AI] Sending request to Gemini with ${contents.length} turns`);
- 
+  
   try {
-    console.log("[AI] Calling generateContent...");
     const responseText = await Promise.race([
       (async () => {
         const result = await model.generateContent({ contents });
         const response = await result.response;
-        
-        // Log finish reason to diagnose safety blocks or other stops
-        console.log("[AI] Gemini finish reason:", response.candidates[0]?.finishReason);
-        
         return response.text();
       })(),
       timeoutPromise(30000),
     ]);
- 
-    console.log("[AI] Successfully received response from Gemini");
     
     if (!responseText || responseText.trim().length === 0) {
-      console.warn("[AI] Gemini returned an empty response.");
       return "<thought>The AI returned an empty response. This can happen due to safety filters or unexpected model behavior.</thought><final>I'm sorry, I encountered an issue generating a response. Please try rephrasing your prompt or starting a new chat.</final>";
     }
     
-    console.log("[AI] Response length:", responseText?.length || 0);
     return responseText;
   } catch (error) {
     console.error("[AI] Error during AI generation:", error);
@@ -114,3 +102,4 @@ export async function handleChat(message, history) {
     throw error;
   }
 }
+

@@ -11,22 +11,14 @@ app.use(express.json());
  * (including <thought> and <final> tags) back to the frontend for parsing.
  */
 app.post('/api/chat', async (req, res) => {
-  console.log('[Server] Received chat request');
   const { message, history } = req.body;
-  console.log('[Server] Message:', message);
-  console.log('[Server] History Length:', history?.length || 0);
 
   if (!message) {
-    console.error('[Server] No message provided');
     return res.status(400).json({ error: 'Message is required' });
   }
 
   try {
-    console.log('[Server] Calling handleChat...');
     const rawAIResponse = await handleChat(message, history || []);
-    console.log('[Server] handleChat returned successfully');
-    
-    console.log('[Server] Sending raw AI response to client');
     res.json({ raw: rawAIResponse });
   } catch (error) {
     console.error('[Server] Internal Server Error:', error);

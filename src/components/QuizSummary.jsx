@@ -1,17 +1,25 @@
 import React from 'react';
 
-const QuizSummary = ({ summary, onRestart }) => {
+const QuizSummary = ({ summary, score, total, onReset }) => {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center bg-gray-50">
-      <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-gray-100">
-        <div className="text-6xl mb-4">🎉</div>
-        <h2 className="text-3xl font-bold mb-4 text-indigo-600">Quiz Completed!</h2>
-        <div className="text-gray-700 mb-8 leading-relaxed">
-          {summary || "You've completed the interactive session. Great job on challenging yourself!"}
+    <div className="flex flex-col items-center justify-center h-full p-6 text-center space-y-8 animate-in fade-in zoom-in duration-500">
+      <div className="space-y-4 max-w-2xl">
+        <div className="text-6xl mb-4">🏆</div>
+        <h1 className="text-4xl font-bold text-gray-900 tracking-tight">
+          Quiz Complete!
+        </h1>
+        <div className="text-6xl font-black text-indigo-600 my-6">
+          {score} / {total}
         </div>
+        <p className="text-lg text-gray-600 leading-relaxed">
+          {summary || "Great effort! Review your notes and try again to master the topic."}
+        </p>
+      </div>
+
+      <div className="flex gap-4">
         <button
-          onClick={onRestart}
-          className="w-full bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition-colors shadow-lg"
+          onClick={onReset}
+          className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all shadow-md"
         >
           Try Another Topic
         </button>

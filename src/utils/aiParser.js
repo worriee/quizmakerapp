@@ -7,9 +7,11 @@ export function parseAIResponse(raw) {
     };
   }
  
+  const titleMatch = raw.match(/<title>([\s\S]*?)<\/title>/);
   const thoughtMatch = raw.match(/<thought>([\s\S]*?)<\/thought>/);
   const finalMatch = raw.match(/<final>([\s\S]*?)<\/final>/);
  
+  const title = titleMatch ? titleMatch[1].trim() : '';
   const thought = thoughtMatch ? thoughtMatch[1].trim() : '';
   let final = finalMatch ? finalMatch[1].trim() : '';
  
@@ -48,6 +50,7 @@ export function parseAIResponse(raw) {
   }
  
   return {
+    title,
     thought,
     final,
     structured,
