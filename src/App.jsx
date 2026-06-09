@@ -611,20 +611,42 @@ function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isSubscribed) return;
       
-      // Only allow auth listener to affect state after the boot sequence is READY
+      if (event === 'SIGNED_IN') {
+        setSession(session);
+        setBootStatus('AUTHENTICATING');
+        try {
+          await fetchSessions(session.user.id);
+          const savedSessionId = localStorage.getItem(SESSION_STORAGE_KEY);
+          if (savedSessionId) {
+            await handleLoadSession(savedSessionId, session);
+          }
+          setBootStatus('READY');
+        } catch (e) {
+          console.error("Login restoration failed:", e);
+          setBootStatus('READY'); // Still go to ready so user can at least see the app
+        }
+        return;
+      }
+
+      if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setBootStatus('UNAUTHENTICATED');
+        setSessions([]);
+        updateCurrentSessionId(null);
+        return;
+      }
+
+      // Only allow other auth events (like TOKEN_REFRESHED) after boot is READY
       if (bootStatus !== 'READY') return;
       
       setSession(session);
       
-      if (session && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+      if (session && event === 'TOKEN_REFRESHED') {
         try {
           await fetchSessions(session.user.id);
         } catch (e) {
           console.error("Auth change session fetch error:", e);
         }
-      } else if (!session) {
-        setSessions([]);
-        updateCurrentSessionId(null);
       }
     });
 
