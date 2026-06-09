@@ -688,10 +688,10 @@ function App() {
   return (
     <>
       {bootStatus === 'INITIALIZING' || bootStatus === 'AUTHENTICATING' ? (
-        <div className="flex items-center justify-center h-screen w-full bg-[#F5F2E9] text-gray-800">
+        <div className="flex items-center justify-center h-screen w-full bg-[#FCF6F5] text-[#7b9acc]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C5A059] mx-auto mb-4"></div>
-            <p className="text-xl font-bold text-[#C5A059]">Preparing TUON AI</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#7b9acc] mx-auto mb-4"></div>
+            <p className="text-xl font-bold text-[#7b9acc]">Preparing TUON AI</p>
           </div>
         </div>
       ) : !session ? (

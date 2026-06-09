@@ -12,6 +12,20 @@ const Login = () => {
   const [error, setError] = useState(null);
   const [isSignUp, setIsSignUp] = useState(false);
 
+  const formatAuthError = (message) => {
+    const map = {
+      'Invalid login credentials': 'Invalid email or password.',
+      'Email not confirmed': 'Please confirm your email first.',
+      'User already registered': 'An account with this email already exists.',
+      'Password should be at least 6 characters': 'Password must be at least 6 characters.',
+      'Unable to validate email address: invalid format': 'Please enter a valid email address.',
+    };
+    for (const [key, val] of Object.entries(map)) {
+      if (message.includes(key)) return val;
+    }
+    return 'Something went wrong. Please try again.';
+  };
+
   // Function to handle signing in existing users
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -28,9 +42,8 @@ const Login = () => {
         console.error('Supabase Login Error:', error);
         throw error;
       }
-      // Note: App.jsx handles the session update via onAuthStateChange listener
     } catch (err) {
-      setError(err.message);
+      setError(formatAuthError(err.message));
     } finally {
       setLoading(false);
     }
@@ -54,42 +67,42 @@ const Login = () => {
       }
       alert('Check your email for the confirmation link!');
     } catch (err) {
-      setError(err.message);
+      setError(formatAuthError(err.message));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-[#F5F2E9] p-4">
-      <div className="bg-white p-8 rounded-[2rem] shadow-sm max-w-md w-full border border-[#EAE7DC]">
+    <div className="flex items-center justify-center min-h-screen bg-[#FCF6F5] p-4">
+      <div className="bg-[#FCF6F5] p-8 rounded-2xl shadow-xl max-w-md w-full border border-[#7b9acc]/30">
         {/* Header Section */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-black text-[#C5A059] mb-1 tracking-tight">TUON AI</h1>
-          <p className="text-xs text-gray-400 mb-6 uppercase tracking-widest font-medium">To Understand On Navigation</p>
-          <h2 className="text-xl font-bold text-gray-800">{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
+          <h1 className="text-3xl font-extrabold text-[#7b9acc] mb-1">TUON AI</h1>
+          <p className="text-sm text-[#7b9acc] mb-6 italic">To Understand Own Navigation</p>
+          <h2 className="text-xl font-bold text-black">{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
         </div>
 
         {/* Auth Form */}
         <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Email Address</label>
+            <label className="block text-sm font-medium text-black mb-1">Email Address</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#C5A059] outline-none transition-all bg-gray-50/50"
+              className="w-full px-4 py-2 rounded-lg border border-[#7b9acc]/30 focus:ring-2 focus:ring-[#7b9acc] outline-none transition-all"
               placeholder="youremail@example.com"
               required
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Password</label>
+            <label className="block text-sm font-medium text-black mb-1">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#C5A059] outline-none transition-all bg-gray-50/50"
+              className="w-full px-4 py-2 rounded-lg border border-[#7b9acc]/30 focus:ring-2 focus:ring-[#7b9acc] outline-none transition-all"
               placeholder="••••••••"
               required
             />
@@ -97,7 +110,7 @@ const Login = () => {
 
           {/* Error Notification */}
           {error && (
-            <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg">
+            <div className="p-3 text-sm text-black bg-[#FCF6F5] border border-[#7b9acc]/30 rounded-lg">
               {error}
             </div>
           )}
@@ -105,7 +118,7 @@ const Login = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#C5A059] text-white font-bold py-3 rounded-xl hover:bg-[#B8860B] transition-all shadow-lg disabled:bg-gray-300 active:scale-[0.98]"
+            className="w-full bg-[#7b9acc] text-white font-semibold py-2 rounded-lg hover:bg-[#7b9acc] transition-colors shadow-md disabled:bg-[#7b9acc]/30"
           >
             {loading ? (isSignUp ? 'Creating account...' : 'Signing in...') : (isSignUp ? 'Sign Up' : 'Sign In')}
           </button>
@@ -113,14 +126,14 @@ const Login = () => {
 
         {/* Toggle between Sign In and Sign Up */}
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-black">
             {isSignUp ? "Already have an account?" : "Don't have an account?"}{' '}
             <button
               onClick={(e) => {
                 e.preventDefault();
                 setIsSignUp(!isSignUp);
               }}
-              className="text-[#C5A059] font-bold hover:text-[#B8860B] transition-colors"
+              className="text-black font-semibold hover:underline"
             >
               {isSignUp ? 'Sign In' : 'Sign Up'}
             </button>

@@ -13,20 +13,20 @@ const QuizInterface = ({ quizData, onAnswer, onExit }) => {
   return (
     <div className="flex flex-col h-full max-w-3xl mx-auto w-full p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+      <div className="flex items-center justify-between border-b border-[#7b9acc]/20 pb-4">
         <button 
           onClick={onExit}
-          className="text-sm text-gray-500 hover:text-gray-800 transition-colors flex items-center gap-1"
+          className="text-sm text-black/60 hover:text-black transition-colors flex items-center gap-1"
         >
           ← Back to Chat
         </button>
         <div className="flex items-center gap-3">
-          <div className="text-xs font-bold text-indigo-600 uppercase tracking-wider">
+          <div className="text-xs font-bold text-black uppercase tracking-wider">
             Question {progress.current} of {progress.total}
           </div>
-          <div className="w-32 h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div className="w-32 h-2 bg-[#FCF6F5] rounded-full overflow-hidden">
             <div 
-              className="h-full bg-indigo-600 transition-all duration-500" 
+              className="h-full bg-[#7b9acc] transition-all duration-500" 
               style={{ width: `${(progress.current / progress.total) * 100}%` }}
             />
           </div>
@@ -35,7 +35,7 @@ const QuizInterface = ({ quizData, onAnswer, onExit }) => {
 
       {/* Question */}
       <div className="space-y-6">
-        <h2 className="text-2xl font-semibold text-gray-900 leading-snug">
+        <h2 className="text-2xl font-semibold text-black leading-snug">
           {text}
         </h2>
 
@@ -50,13 +50,13 @@ const QuizInterface = ({ quizData, onAnswer, onExit }) => {
             
             let buttonClass = "text-left px-5 py-4 rounded-xl border transition-all text-sm font-medium ";
             if (selectedOption === null) {
-              buttonClass += "border-gray-200 hover:bg-indigo-50 hover:border-indigo-300";
+              buttonClass += "border-[#7b9acc]/30 hover:bg-[#7b9acc]/10 hover:border-[#7b9acc]/50";
             } else if (option === selectedOption) {
               buttonClass += feedback?.isCorrect 
-                ? "bg-green-50 border-green-500 text-green-800" 
-                : "bg-red-50 border-red-500 text-red-800";
+                ? "bg-[#7b9acc] border-[#7b9acc] text-[#FCF6F5]" 
+                : "bg-[#FCF6F5] border-[#7b9acc] text-black";
             } else {
-              buttonClass += "border-gray-100 text-gray-400";
+              buttonClass += "border-[#7b9acc]/20 text-black/40";
             }
 
             return (
@@ -77,8 +77,8 @@ const QuizInterface = ({ quizData, onAnswer, onExit }) => {
       {feedback && feedback.isCorrect !== null && (
         <div className={`p-5 rounded-2xl border animate-in slide-in-from-top-2 duration-300 ${
           feedback.isCorrect 
-            ? "bg-green-50 border-green-100 text-green-800" 
-            : "bg-red-50 border-red-100 text-red-800"
+            ? "bg-[#7b9acc] border-[#7b9acc] text-[#FCF6F5]" 
+            : "bg-[#FCF6F5] border-[#7b9acc] text-black"
         }`}>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xl">{feedback.isCorrect ? "✅" : "❌"}</span>

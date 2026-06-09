@@ -16,7 +16,7 @@ const renderRawAIOutput = (text) => {
     .replace(/<\/final>/g, "\n---");
 
   return (
-    <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed whitespace-pre-wrap">
+    <div className="prose prose-sm max-w-none text-black leading-relaxed whitespace-pre-wrap">
       <ReactMarkdown remarkGfm>{processedText}</ReactMarkdown>
     </div>
   );
@@ -74,7 +74,7 @@ const ChatInterface = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#F5F2E9]">
+    <div className="flex flex-col h-full bg-[#FCF6F5]">
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-4 md:p-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
@@ -82,10 +82,10 @@ const ChatInterface = ({
         <div className="max-w-3xl mx-auto w-full space-y-6">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50">
-              <h2 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#B8860B] to-[#C5A059] leading-tight">
+               <h2 className="text-2xl md:text-3xl font-extrabold text-[#7b9acc] leading-tight">
                 Study to Understand, <span className="block md:inline">Navigate to Succeed.</span>
               </h2>
-              <p className="text-gray-500 max-w-sm">
+              <p className="text-black max-w-sm">
                 Ask me to summarize a topic, create study notes, or start a mock
                 quiz.
               </p>
@@ -99,8 +99,8 @@ const ChatInterface = ({
                 <div
                   className={`max-w-[90%] md:max-w-2xl p-4 rounded-2xl ${
                     msg.role === "user"
-                      ? "bg-[#EAE7DC] text-gray-800 rounded-tr-none"
-                      : "bg-white border border-[#E3E1D5] text-gray-800 rounded-tl-none shadow-sm"
+                       ? "bg-[#FCF6F5] text-black rounded-tr-none shadow-sm"
+                       : "bg-[#FCF6F5] border border-[#7b9acc]/30 text-black rounded-tl-none shadow-sm"
                   }`}
                 >
                   {msg.role === "model" && msg.raw && (
@@ -112,12 +112,12 @@ const ChatInterface = ({
                         >
                           <div
                             onClick={() => toggleThought(idx)}
-                            className="flex items-center justify-between p-2 bg-[#EDEAE0] rounded-lg border border-[#E3E1D5] cursor-pointer hover:bg-[#E3E1D5] transition-colors group"
+                            className="flex items-center justify-between p-2 bg-[#FCF6F5] rounded-lg border border-[#7b9acc] cursor-pointer hover:bg-[#7b9acc] transition-colors group"
                           >
-                            <div className="flex items-center gap-2 text-xs font-medium text-gray-400">
+                            <div className="flex items-center gap-2 text-xs font-medium text-black">
                               <span>Reasoning</span>
                             </div>
-                            <div className="text-gray-400 group-hover:text-indigo-500 transition-colors">
+                            <div className="text-black group-hover:text-[#7b9acc] transition-colors">
                               {expandedThoughts[idx] ? (
                                 <svg
                                   className="w-4 h-4"
@@ -150,7 +150,7 @@ const ChatInterface = ({
                             </div>
                           </div>
                           {expandedThoughts[idx] && (
-                            <div className="mt-2 p-3 text-sm text-gray-500 italic leading-relaxed bg-[#EDEAE0] rounded-b-lg border-x border-b border-[#E3E1D5] break-words max-h-48 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                            <div className="mt-2 p-3 text-sm text-black italic leading-relaxed bg-[#FCF6F5] rounded-b-lg border-x border-b border-[#7b9acc] break-words max-h-48 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                               {msg.raw.match(
                                 /<thought>([\s\S]*?)<\/thought>/,
                               )?.[1] || ""}
@@ -159,15 +159,15 @@ const ChatInterface = ({
                         </div>
                       )}
 
-                      <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed overflow-hidden break-words">
+                      <div className="prose prose-sm max-w-none text-black leading-relaxed overflow-hidden break-words">
                         <ReactMarkdown remarkGfm>{msg.text}</ReactMarkdown>
                       </div>
 
                       {msg.type === "quiz" && (
-                        <div className="mt-6 pt-6 border-t border-gray-100 space-y-4">
-                          <div className="flex items-center gap-2 text-xs font-bold text-[#C5A059] uppercase tracking-wider mb-2">
+                        <div className="mt-6 pt-6 border-t border-[#7b9acc]/20 space-y-4">
+                          <div className="flex items-center gap-2 text-xs font-bold text-black uppercase tracking-wider mb-2">
                             <span>Quiz Interface</span>
-                            <span className="text-gray-300">•</span>
+                            <span className="text-black">•</span>
                             <span>
                               Question {msg.progress?.current} of{" "}
                               {msg.progress?.total}
@@ -178,8 +178,8 @@ const ChatInterface = ({
                             <div
                               className={`p-3 rounded-lg mb-4 text-sm ${
                                 msg.feedback.isCorrect
-                                  ? "bg-green-50 text-green-800 border border-green-100"
-                                  : "bg-red-50 text-red-800 border border-red-100"
+                                  ? "bg-[#7b9acc] text-[#FCF6F5] border border-[#7b9acc] hover:bg-[#7b9acc]/80"
+                                  : "bg-[#FCF6F5] text-[#7b9acc] border border-[#7b9acc]/30 hover:bg-[#7b9acc]/10 hover:border-[#7b9acc]/50"
                               }`}
                             >
                               <p className="font-bold mb-1">
@@ -201,7 +201,7 @@ const ChatInterface = ({
                                 <button
                                   key={oIdx}
                                   onClick={() => onSendMessage(option)}
-                                  className="text-left px-4 py-2 rounded-xl border border-gray-200 hover:bg-indigo-50 hover:border-indigo-300 transition-all text-sm font-medium"
+                                  className="text-left px-4 py-2 rounded-xl border border-[#7b9acc]/30 hover:bg-[#7b9acc]/10 hover:border-[#7b9acc]/50 transition-all text-sm font-medium"
                                 >
                                   {option}
                                 </button>
@@ -214,14 +214,14 @@ const ChatInterface = ({
                   )}
 
                   {msg.role === "model" && !msg.raw && msg.type !== "quiz" && (
-                    <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed overflow-hidden break-words">
+                    <div className="prose prose-sm max-w-none text-black leading-relaxed overflow-hidden break-words">
                       <ReactMarkdown remarkGfm>{msg.text}</ReactMarkdown>
                     </div>
                   )}
 
                   {msg.role === "user" && (
                     <div className="space-y-2">
-                      <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed break-words">
+                      <div className="prose prose-sm max-w-none text-black leading-relaxed break-words">
                         {msg.text}
                       </div>
                     </div>
@@ -231,7 +231,7 @@ const ChatInterface = ({
                     <div className="mt-6 flex justify-end">
                       <button
                         onClick={onStartQuiz}
-                        className="bg-[#C5A059] text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-[#B8860B] transition-all shadow-sm flex items-center gap-2"
+                        className="bg-[#7b9acc] text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-[#7b9acc] transition-all shadow-sm flex items-center gap-2"
                       >
                         Start Mock Quiz
                       </button>
@@ -244,13 +244,13 @@ const ChatInterface = ({
 
           {isLoading && (
             <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="max-w-[85%] md:max-w-2xl p-4 rounded-2xl bg-white border border-gray-200 text-gray-800 rounded-tl-none shadow-sm">
-                <div className="flex items-center gap-3 text-gray-500">
-                  <span className="text-sm font-medium italic text-[#C5A059]">Thinking</span>
+              <div className="max-w-[85%] md:max-w-2xl p-4 rounded-2xl bg-[#FCF6F5] border border-[#7b9acc]/30 text-black rounded-tl-none shadow-sm">
+                <div className="flex items-center gap-3 text-black">
+                  <span className="text-sm font-medium italic text-black">Thinking</span>
                   <div className="flex gap-1">
-                    <div className="w-1 h-1 bg-[#C5A059] rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                    <div className="w-1 h-1 bg-[#C5A059] rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                    <div className="w-1 h-1 bg-[#C5A059] rounded-full animate-bounce"></div>
+                    <div className="w-1 h-1 bg-[#7b9acc] rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                    <div className="w-1 h-1 bg-[#7b9acc] rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                    <div className="w-1 h-1 bg-[#7b9acc] rounded-full animate-bounce"></div>
                   </div>
                 </div>
               </div>
@@ -259,7 +259,7 @@ const ChatInterface = ({
         </div>
       </div>
 
-      <div className="p-4 md:p-8 bg-gradient-to-t from-white via-white to-transparent">
+      <div className="p-4 md:p-8 bg-[#FCF6F5]">
         <form
           onSubmit={handleSubmit}
           className="max-w-3xl mx-auto relative group"
@@ -273,7 +273,7 @@ const ChatInterface = ({
                 onKeyDown={handleKeyDown}
                 placeholder="Start a topic..."
                 rows="1"
-                className="w-full px-4 py-3 md:px-6 md:py-4 pr-12 md:pr-16 rounded-2xl border border-[#E3E1D5] focus:ring-2 focus:ring-[#C5A059] focus:border-transparent outline-none shadow-sm transition-all bg-white resize-none min-h-[56px] max-h-[200px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                className="w-full px-4 py-3 md:px-6 md:py-4 pr-12 md:pr-16 rounded-2xl border border-[#7b9acc] focus:ring-2 focus:ring-[#7b9acc] focus:border-transparent outline-none shadow-sm transition-all bg-[#FCF6F5] resize-none min-h-[56px] max-h-[200px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
                 disabled={isLoading}
               />
               <button
@@ -287,8 +287,8 @@ const ChatInterface = ({
                 }}
                 className={`absolute right-3 bottom-3 p-2 rounded-xl transition-all flex items-center justify-center ${
                   isLoading
-                    ? "bg-red-500 text-white hover:bg-red-600"
-                    : "bg-[#C5A059] text-white hover:bg-[#B8860B] disabled:bg-gray-300"
+                    ? "bg-[#7b9acc] text-[#FCF6F5] hover:bg-[#7b9acc]/80"
+                    : "bg-[#7b9acc] text-white hover:bg-[#7b9acc] disabled:bg-[#7b9acc]/30"
                 }`}
               >
                 {isLoading ? (
@@ -306,7 +306,7 @@ const ChatInterface = ({
             </div>
           </div>
         </form>
-        <p className="text-center text-[10px] text-gray-400 mt-3">
+        <p className="text-center text-[10px] text-black/40 mt-3">
           <span className="italic">AI still make mistakes always double check.</span>
         </p>
       </div>
