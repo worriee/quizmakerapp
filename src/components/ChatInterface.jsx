@@ -10,7 +10,7 @@ const renderRawAIOutput = (text) => {
   if (!text) return null;
 
   const processedText = text
-    .replace(/<thought>/g, "💭 **Reasoning:**\n")
+    .replace(/<thought>/g, "**Reasoning:**\n")
     .replace(/<\/thought>/g, "\n---")
     .replace(/<final>/g, "🎯 **Final Response:**\n")
     .replace(/<\/final>/g, "\n---");
@@ -82,9 +82,8 @@ const ChatInterface = ({
         <div className="max-w-3xl mx-auto w-full space-y-6">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50">
-              <div className="text-5xl">✨</div>
-              <h2 className="text-2xl font-semibold text-gray-700">
-                How can I help you learn today?
+              <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 leading-tight">
+                Study to Understand,<br /> Navigate to Succeed.
               </h2>
               <p className="text-gray-500 max-w-sm">
                 Ask me to summarize a topic, create study notes, or start a mock
@@ -116,7 +115,7 @@ const ChatInterface = ({
                             className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors group"
                           >
                             <div className="flex items-center gap-2 text-xs font-medium text-gray-400">
-                              <span>💭 Reasoning</span>
+                              <span>Reasoning</span>
                             </div>
                             <div className="text-gray-400 group-hover:text-indigo-500 transition-colors">
                               {expandedThoughts[idx] ? (
@@ -308,11 +307,7 @@ const ChatInterface = ({
           </div>
         </form>
         <p className="text-center text-[10px] text-gray-400 mt-3">
-          <span className="font-semibold">
-            Small progress is still a progress.
-          </span>
-          <br />
-          <span>-Julry</span>
+          <span className="italic">AI still make mistakes always double check.</span>
         </p>
       </div>
     </div>

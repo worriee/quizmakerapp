@@ -230,7 +230,7 @@ const MainLayout = ({
             <span className="text-xl">☰</span>
           </button>
           <div className="ml-4 flex items-center gap-4">
-            <span className="font-semibold">Quiz Maker</span>
+            <span className="font-semibold">TUON AI</span>
             
             {saveStatus !== 'synced' && (
               <div className={`flex items-center gap-2 px-2 py-1 rounded-full text-[10px] font-medium transition-all ${

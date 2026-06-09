@@ -65,8 +65,9 @@ const Login = () => {
       <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-gray-100">
         {/* Header Section */}
         <div className="text-center mb-8">
-          <div className="text-4xl mb-2">🎓</div>
-          <h1 className="text-2xl font-bold text-gray-900">{isSignUp ? 'Create Account' : 'Welcome Back'}</h1>
+          <h1 className="text-3xl font-extrabold text-indigo-600 mb-1">TUON AI</h1>
+          <p className="text-sm text-gray-500 mb-6 italic">To Understand On Navigation</p>
+          <h2 className="text-xl font-bold text-gray-900">{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
         </div>
 
         {/* Auth Form */}

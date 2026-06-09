@@ -662,7 +662,7 @@ function App() {
         <div className="flex items-center justify-center h-screen w-full bg-slate-900 text-white">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-            <p className="text-lg font-medium">Preparing your workspace...</p>
+            <p className="text-lg font-medium">Preparing TUON AI</p>
           </div>
         </div>
       ) : !session ? (
