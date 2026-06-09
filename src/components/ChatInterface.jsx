@@ -82,8 +82,8 @@ const ChatInterface = ({
         <div className="max-w-3xl mx-auto w-full space-y-6">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50">
-              <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#B8860B] to-[#C5A059] leading-tight">
-                Study to Understand,<br /> Navigate to Succeed.
+              <h2 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#B8860B] to-[#C5A059] leading-tight">
+                Study to Understand, <span className="block md:inline">Navigate to Succeed.</span>
               </h2>
               <p className="text-gray-500 max-w-sm">
                 Ask me to summarize a topic, create study notes, or start a mock
@@ -273,7 +273,7 @@ const ChatInterface = ({
                 onKeyDown={handleKeyDown}
                 placeholder="Start a topic..."
                 rows="1"
-                className="w-full px-6 py-4 pr-16 rounded-2xl border border-[#E3E1D5] focus:ring-2 focus:ring-[#C5A059] focus:border-transparent outline-none shadow-sm transition-all bg-white resize-none min-h-[56px] max-h-[200px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                className="w-full px-4 py-3 md:px-6 md:py-4 pr-12 md:pr-16 rounded-2xl border border-[#E3E1D5] focus:ring-2 focus:ring-[#C5A059] focus:border-transparent outline-none shadow-sm transition-all bg-white resize-none min-h-[56px] max-h-[200px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
                 disabled={isLoading}
               />
               <button

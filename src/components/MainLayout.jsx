@@ -71,12 +71,19 @@ const MainLayout = ({
   };
 
   return (
-    <div className="flex h-screen bg-[#F5F2E9] text-gray-900 overflow-hidden">
+    <div className="flex h-screen bg-[#F5F2E9] text-gray-900 overflow-hidden relative">
+      {/* Mobile Overlay Backdrop */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
       {/* Sidebar */}
       <aside
-        className={`bg-[#EDEAE0] border-r border-[#E3E1D5] transition-all duration-300 ease-in-out flex flex-col ${
-          isSidebarOpen ? 'w-64' : 'w-0 -translate-x-full'
-        } lg:translate-x-0 lg:relative`}
+        className={`fixed inset-y-0 left-0 z-50 bg-[#EDEAE0] border-r border-[#E3E1D5] transition-all duration-300 ease-in-out flex flex-col ${
+          isSidebarOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full'
+        } lg:translate-x-0 lg:relative lg:w-64`}
       >
         <div className="p-4 flex flex-col h-full">
           <button
@@ -169,8 +176,11 @@ const MainLayout = ({
 
           <div className="pt-4 border-t border-gray-200 relative">
             <button
-              onClick={() => setIsProfileOpen(!isProfileOpen)}
-              className="flex items-center gap-3 px-2 py-2 w-full rounded-lg hover:bg-gray-200 cursor-pointer transition-all text-left"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsProfileOpen(!isProfileOpen);
+              }}
+              className="flex items-center gap-3 px-2 py-2 w-full rounded-xl hover:bg-[#E3E1D5] cursor-pointer transition-all text-left"
             >
               <div className="w-8 h-8 bg-[#C5A059] rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
                 {user?.email?.charAt(0).toUpperCase() || 'U'}
@@ -181,11 +191,11 @@ const MainLayout = ({
             {isProfileOpen && (
               <div
                 ref={profileRef}
-                className="absolute bottom-full left-0 mb-2 w-64 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-2"
+                className="absolute bottom-full left-0 mb-3 w-64 bg-white border border-[#E3E1D5] rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-2"
               >
-                <div className="p-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">User Profile</h3>
+                <div className="p-5">
+                  <div className="flex justify-between items-center mb-5">
+                    <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">User Profile</h3>
                     <button
                       onClick={() => setIsProfileOpen(false)}
                       className="p-1 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600"
@@ -198,13 +208,13 @@ const MainLayout = ({
                   
                   <div className="space-y-3">
                     <div className="text-sm">
-                      <p className="text-gray-400 text-[10px] uppercase font-semibold mb-1">Email Address</p>
-                      <p className="text-gray-800 font-medium truncate">{user?.email || 'Not available'}</p>
+                      <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-1">Email Address</p>
+                      <p className="text-gray-800 font-semibold truncate">{user?.email || 'Not available'}</p>
                     </div>
                     
                     <button
                       onClick={onLogout}
-                      className="w-full mt-4 flex items-center justify-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-all text-sm font-semibold border border-red-100"
+                      className="w-full mt-6 flex items-center justify-center gap-2 px-3 py-2.5 bg-[#FDF8F3] text-red-500 rounded-xl hover:bg-red-50 transition-all text-sm font-bold border border-red-100/50"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3.375-3.375a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5a.75.75 0 01.75-.75z" />
