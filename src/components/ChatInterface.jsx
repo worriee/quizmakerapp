@@ -74,7 +74,7 @@ const ChatInterface = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full bg-[#F5F2E9]">
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-4 md:p-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
@@ -82,7 +82,7 @@ const ChatInterface = ({
         <div className="max-w-3xl mx-auto w-full space-y-6">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50">
-              <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 leading-tight">
+              <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#B8860B] to-[#C5A059] leading-tight">
                 Study to Understand,<br /> Navigate to Succeed.
               </h2>
               <p className="text-gray-500 max-w-sm">
@@ -99,8 +99,8 @@ const ChatInterface = ({
                 <div
                   className={`max-w-[90%] md:max-w-2xl p-4 rounded-2xl ${
                     msg.role === "user"
-                      ? "bg-gray-100 text-gray-800 rounded-tr-none"
-                      : "bg-white border border-gray-200 text-gray-800 rounded-tl-none shadow-sm"
+                      ? "bg-[#EAE7DC] text-gray-800 rounded-tr-none"
+                      : "bg-white border border-[#E3E1D5] text-gray-800 rounded-tl-none shadow-sm"
                   }`}
                 >
                   {msg.role === "model" && msg.raw && (
@@ -112,7 +112,7 @@ const ChatInterface = ({
                         >
                           <div
                             onClick={() => toggleThought(idx)}
-                            className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors group"
+                            className="flex items-center justify-between p-2 bg-[#EDEAE0] rounded-lg border border-[#E3E1D5] cursor-pointer hover:bg-[#E3E1D5] transition-colors group"
                           >
                             <div className="flex items-center gap-2 text-xs font-medium text-gray-400">
                               <span>Reasoning</span>
@@ -150,7 +150,7 @@ const ChatInterface = ({
                             </div>
                           </div>
                           {expandedThoughts[idx] && (
-                            <div className="mt-2 p-3 text-sm text-gray-500 italic leading-relaxed bg-gray-50 rounded-b-lg border-x border-b border-gray-100 break-words max-h-48 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                            <div className="mt-2 p-3 text-sm text-gray-500 italic leading-relaxed bg-[#EDEAE0] rounded-b-lg border-x border-b border-[#E3E1D5] break-words max-h-48 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                               {msg.raw.match(
                                 /<thought>([\s\S]*?)<\/thought>/,
                               )?.[1] || ""}
@@ -165,7 +165,7 @@ const ChatInterface = ({
 
                       {msg.type === "quiz" && (
                         <div className="mt-6 pt-6 border-t border-gray-100 space-y-4">
-                          <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 uppercase tracking-wider mb-2">
+                          <div className="flex items-center gap-2 text-xs font-bold text-[#C5A059] uppercase tracking-wider mb-2">
                             <span>Quiz Interface</span>
                             <span className="text-gray-300">•</span>
                             <span>
@@ -231,7 +231,7 @@ const ChatInterface = ({
                     <div className="mt-6 flex justify-end">
                       <button
                         onClick={onStartQuiz}
-                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-all shadow-sm flex items-center gap-2"
+                        className="bg-[#C5A059] text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-[#B8860B] transition-all shadow-sm flex items-center gap-2"
                       >
                         Start Mock Quiz
                       </button>
@@ -246,11 +246,11 @@ const ChatInterface = ({
             <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="max-w-[85%] md:max-w-2xl p-4 rounded-2xl bg-white border border-gray-200 text-gray-800 rounded-tl-none shadow-sm">
                 <div className="flex items-center gap-3 text-gray-500">
-                  <span className="text-sm font-medium italic">Thinking</span>
+                  <span className="text-sm font-medium italic text-[#C5A059]">Thinking</span>
                   <div className="flex gap-1">
-                    <div className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                    <div className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                    <div className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce"></div>
+                    <div className="w-1 h-1 bg-[#C5A059] rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                    <div className="w-1 h-1 bg-[#C5A059] rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                    <div className="w-1 h-1 bg-[#C5A059] rounded-full animate-bounce"></div>
                   </div>
                 </div>
               </div>
@@ -273,7 +273,7 @@ const ChatInterface = ({
                 onKeyDown={handleKeyDown}
                 placeholder="Start a topic..."
                 rows="1"
-                className="w-full px-6 py-4 pr-16 rounded-2xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none shadow-sm transition-all bg-white resize-none min-h-[56px] max-h-[200px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                className="w-full px-6 py-4 pr-16 rounded-2xl border border-[#E3E1D5] focus:ring-2 focus:ring-[#C5A059] focus:border-transparent outline-none shadow-sm transition-all bg-white resize-none min-h-[56px] max-h-[200px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
                 disabled={isLoading}
               />
               <button
@@ -288,7 +288,7 @@ const ChatInterface = ({
                 className={`absolute right-3 bottom-3 p-2 rounded-xl transition-all flex items-center justify-center ${
                   isLoading
                     ? "bg-red-500 text-white hover:bg-red-600"
-                    : "bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-300"
+                    : "bg-[#C5A059] text-white hover:bg-[#B8860B] disabled:bg-gray-300"
                 }`}
               >
                 {isLoading ? (

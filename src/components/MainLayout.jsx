@@ -71,23 +71,23 @@ const MainLayout = ({
   };
 
   return (
-    <div className="flex h-screen bg-white text-gray-900 overflow-hidden">
+    <div className="flex h-screen bg-[#F5F2E9] text-gray-900 overflow-hidden">
       {/* Sidebar */}
       <aside
-        className={`bg-gray-50 border-r border-gray-200 transition-all duration-300 ease-in-out flex flex-col ${
+        className={`bg-[#EDEAE0] border-r border-[#E3E1D5] transition-all duration-300 ease-in-out flex flex-col ${
           isSidebarOpen ? 'w-64' : 'w-0 -translate-x-full'
         } lg:translate-x-0 lg:relative`}
       >
         <div className="p-4 flex flex-col h-full">
           <button
             onClick={onNewChat}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-all font-medium text-sm shadow-sm mb-6"
+            className="flex items-center gap-2 px-4 py-2 bg-[#C5A059] text-white rounded-xl hover:bg-[#B8860B] transition-all font-bold text-sm shadow-sm mb-6"
           >
             <span className="text-lg">+</span> New Chat
           </button>
 
           <div className="flex-1 overflow-y-auto space-y-2">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-2">Recent Chats</p>
+            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 px-2">Recent Chats</p>
             {sessions.length === 0 ? (
               <div className="flex flex-col items-center justify-center p-4 text-center">
                 <p className="text-sm text-gray-400 italic">No recent chats</p>
@@ -100,12 +100,12 @@ const MainLayout = ({
                     onClick={() => onLoadSession(session.id)}
                     className={`group relative w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-200 cursor-pointer flex items-center justify-between ${
                       currentSessionId === session.id
-                        ? 'bg-indigo-100 text-indigo-700 font-medium'
-                        : 'text-gray-600 hover:bg-gray-200'
+                        ? 'bg-[#C5A059] text-white font-bold'
+                        : 'text-gray-600 hover:bg-[#E3E1D5]'
                     }`}
                   >
                     {currentSessionId === session.id && (
-                      <div className="absolute left-0 top-2 bottom-2 w-1 bg-indigo-600 rounded-r-full" />
+                      <div className="absolute left-0 top-2 bottom-2 w-1 bg-white rounded-r-full opacity-50" />
                     )}
                     {editingId === session.id ? (
                       <input
@@ -115,13 +115,13 @@ const MainLayout = ({
                         onKeyDown={(e) => handleKeyDown(e, session.id)}
                         onBlur={(e) => submitRename(e, session.id)}
                         autoFocus
-                        className="flex-1 px-2 py-1 text-sm border border-indigo-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-800 z-20"
+                        className="flex-1 px-2 py-1 text-sm border border-[#C5A059] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C5A059] bg-white text-gray-800 z-20"
                         onClick={(e) => e.stopPropagation()}
                       />
                     ) : (
                       <div className="flex items-center gap-1 relative z-10 truncate block flex-1 pr-2">
                         {session.pinned && (
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3 text-indigo-500 shrink-0">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3 text-[#C5A059] shrink-0">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.224A1.2 1.2 0 0116.125 5.625c.134.195.326.347.56.44a6.258 6.258 0 015.087 5.087c.093.234.245.426.44.56a1.2 1.2 0 01.44 1.2v8.25a1.2 1.2 0 01-1.2 1.2h-3.5a1.2 1.2 0 01-1.2-1.2v-4.5a1.2 1.2 0 00-1.2-1.2h-3a1.2 1.2 0 00-1.2 1.2v4.5a1.2 1.2 0 01-1.2 1.2h-3.5a1.2 1.2 0 01-1.2-1.2v-8.25a1.2 1.2 0 01.44-1.2c.194-.114.386-.266.56-.44a6.258 6.258 0 015.087-5.087c.093-.234.245-.426.44-.56a1.2 1.2 0 011.2-.44z" />
                           </svg>
                         )}
@@ -172,7 +172,7 @@ const MainLayout = ({
               onClick={() => setIsProfileOpen(!isProfileOpen)}
               className="flex items-center gap-3 px-2 py-2 w-full rounded-lg hover:bg-gray-200 cursor-pointer transition-all text-left"
             >
-              <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
+              <div className="w-8 h-8 bg-[#C5A059] rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
                 {user?.email?.charAt(0).toUpperCase() || 'U'}
               </div>
               <span className="text-sm font-medium truncate">{user?.email || 'User'}</span>
@@ -222,7 +222,7 @@ const MainLayout = ({
       {/* Main Content */}
       <main className="flex-1 flex flex-col relative overflow-hidden">
         {/* Header */}
-        <div className="flex items-center p-4 border-b border-gray-200 bg-white">
+        <div className="flex items-center p-4 border-b border-[#E3E1D5] bg-[#F5F2E9]">
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="p-2 hover:bg-gray-100 rounded-lg transition-all"

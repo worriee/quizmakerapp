@@ -61,35 +61,35 @@ const Login = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
-      <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-gray-100">
+    <div className="flex items-center justify-center min-h-screen bg-[#F5F2E9] p-4">
+      <div className="bg-white p-8 rounded-[2rem] shadow-sm max-w-md w-full border border-[#EAE7DC]">
         {/* Header Section */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-extrabold text-indigo-600 mb-1">TUON AI</h1>
-          <p className="text-sm text-gray-500 mb-6 italic">To Understand On Navigation</p>
-          <h2 className="text-xl font-bold text-gray-900">{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
+          <h1 className="text-4xl font-black text-[#C5A059] mb-1 tracking-tight">TUON AI</h1>
+          <p className="text-xs text-gray-400 mb-6 uppercase tracking-widest font-medium">To Understand On Navigation</p>
+          <h2 className="text-xl font-bold text-gray-800">{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
         </div>
 
         {/* Auth Form */}
         <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Email Address</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#C5A059] outline-none transition-all bg-gray-50/50"
               placeholder="youremail@example.com"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#C5A059] outline-none transition-all bg-gray-50/50"
               placeholder="••••••••"
               required
             />
@@ -105,7 +105,7 @@ const Login = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white font-semibold py-2 rounded-lg hover:bg-indigo-700 transition-colors shadow-md disabled:bg-gray-400"
+            className="w-full bg-[#C5A059] text-white font-bold py-3 rounded-xl hover:bg-[#B8860B] transition-all shadow-lg disabled:bg-gray-300 active:scale-[0.98]"
           >
             {loading ? (isSignUp ? 'Creating account...' : 'Signing in...') : (isSignUp ? 'Sign Up' : 'Sign In')}
           </button>
@@ -120,7 +120,7 @@ const Login = () => {
                 e.preventDefault();
                 setIsSignUp(!isSignUp);
               }}
-              className="text-indigo-600 font-semibold hover:underline"
+              className="text-[#C5A059] font-bold hover:text-[#B8860B] transition-colors"
             >
               {isSignUp ? 'Sign In' : 'Sign Up'}
             </button>
