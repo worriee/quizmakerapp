@@ -573,10 +573,21 @@ function App() {
   useEffect(() => {
     let isSubscribed = true;
 
+    const withTimeout = (promise, ms, taskName) => {
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`${taskName} timed out after ${ms}ms`)), ms)
+      );
+      return Promise.race([promise, timeout]);
+    };
+
     const bootSequence = async () => {
       try {
-        // 1. Auth Resolution
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        // 1. Auth Resolution (with 5s timeout)
+        const { data: { session: initialSession } } = await withTimeout(
+          supabase.auth.getSession(),
+          5000,
+          "Auth session check"
+        );
         
         if (!initialSession) {
           if (isSubscribed) setBootStatus('UNAUTHENTICATED');
@@ -588,23 +599,41 @@ function App() {
           setBootStatus('AUTHENTICATING');
         }
 
-        // 2. Context Restoration (Parallel)
+        // 2. Context Restoration (Parallel with individual timeouts)
+        // We wrap each task so that one failing doesn't block the others or the boot process
         await Promise.all([
-          fetchSessions(initialSession.user.id),
+          withTimeout(fetchSessions(initialSession.user.id), 7000, "Fetch sessions")
+            .catch(e => console.warn("[Boot] fetchSessions failed/timed out, continuing...", e)),
           (async () => {
             const savedSessionId = localStorage.getItem(SESSION_STORAGE_KEY);
             if (savedSessionId) {
-              await handleLoadSession(savedSessionId, initialSession);
+              try {
+                await withTimeout(handleLoadSession(savedSessionId, initialSession), 7000, "Load active session");
+              } catch (e) {
+                console.warn("[Boot] handleLoadSession failed/timed out, continuing...", e);
+              }
             }
           })()
         ]);
 
         if (isSubscribed) setBootStatus('READY');
       } catch (error) {
-        console.error("Boot sequence failed:", error);
-        if (isSubscribed) setBootStatus('UNAUTHENTICATED');
+        console.error("Critical boot sequence failure:", error);
+        if (isSubscribed) {
+          // If auth failed or timed out, go to UNAUTHENTICATED.
+          // If it's a different error but we have a session, we might still want to try READY.
+          setBootStatus('UNAUTHENTICATED');
+        }
       }
     };
+
+    // Global watchdog: if boot takes > 15s, force a terminal state to avoid infinite loading
+    const bootWatchdog = setTimeout(() => {
+      if (isSubscribed && (bootStatus === 'INITIALIZING' || bootStatus === 'AUTHENTICATING')) {
+        console.error("[Boot] Global watchdog triggered: boot sequence took too long. Forcing READY state.");
+        setBootStatus('READY');
+      }
+    }, 15000);
 
     bootSequence();
 
