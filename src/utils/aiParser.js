@@ -28,7 +28,7 @@ export function parseAIResponse(raw) {
         if (parsed && typeof parsed === 'object' && (parsed.type === 'notes' || parsed.type === 'quiz')) {
           final = remainingText;
         }
-      } catch (e) {
+      } catch {
         // Not valid JSON, treat as plain text
       }
     }
@@ -45,7 +45,7 @@ export function parseAIResponse(raw) {
     if (parsed && typeof parsed === 'object') {
       structured = parsed;
     }
-  } catch (e) {
+  } catch {
     // Not JSON, structured remains empty
   }
  

@@ -1,4 +1,4 @@
-import React from 'react';
+// React 17+ JSX transform does not require React import
 
 const QuizSummary = ({ summary, score, total, onReset }) => {
   return (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 const QuizInterface = ({ quizData, onAnswer, onExit }) => {
   const [selectedOption, setSelectedOption] = useState(null);
@@ -41,8 +41,6 @@ const QuizInterface = ({ quizData, onAnswer, onExit }) => {
 
         <div className="grid grid-cols-1 gap-3">
           {options.map((option, idx) => {
-            const isCorrect = feedback?.isCorrect === true && option === quizData.correctAnswer; // Assuming correctAnswer is passed
-            const isWrong = feedback?.isCorrect === false && option === selectedOption;
             
             // Since we don't have 'correctAnswer' in the JSON, we use feedback text or the AI response.
             // In a real app, we'd need the correct option explicitly. 

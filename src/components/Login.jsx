@@ -1,10 +1,7 @@
-import React, { useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { useState } from 'react';
 
-/**
- * Login Component: Handles user authentication via Supabase (Email/Password).
- * Supports both Sign-In and Sign-Up modes.
- */
+const API_BASE_URL = '/api';
+
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,46 +23,35 @@ const Login = () => {
     return 'Something went wrong. Please try again.';
   };
 
-  // Function to handle signing in existing users
-  const handleLogin = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const endpoint = isSignUp ? '/auth/signup' : '/auth/login';
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+        credentials: 'include',
       });
 
-      if (error) {
-        console.error('Supabase Login Error:', error);
-        throw error;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Authentication failed');
       }
-    } catch (err) {
-      setError(formatAuthError(err.message));
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  // Function to handle creating new user accounts
-  const handleSignUp = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (error) {
-        console.error('Supabase Sign Up Error:', error);
-        throw error;
+      if (isSignUp) {
+        alert('Account created successfully! Please log in.');
+        setIsSignUp(false);
+      } else {
+        // Redirect or let parent handle it
+        window.location.href = '/';
       }
-      alert('Check your email for the confirmation link!');
     } catch (err) {
       setError(formatAuthError(err.message));
     } finally {
@@ -84,7 +70,7 @@ const Login = () => {
         </div>
 
         {/* Auth Form */}
-        <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-black mb-1">Email Address</label>
             <input
@@ -105,6 +91,7 @@ const Login = () => {
               className="w-full px-4 py-2 rounded-lg border border-[#7b9acc]/30 focus:ring-2 focus:ring-[#7b9acc] outline-none transition-all"
               placeholder="••••••••"
               required
+              minLength={6}
             />
           </div>
 
@@ -129,10 +116,8 @@ const Login = () => {
           <p className="text-sm text-black">
             {isSignUp ? "Already have an account?" : "Don't have an account?"}{' '}
             <button
-              onClick={(e) => {
-                e.preventDefault();
-                setIsSignUp(!isSignUp);
-              }}
+              type="button"
+              onClick={() => setIsSignUp(!isSignUp)}
               className="text-black font-semibold hover:underline"
             >
               {isSignUp ? 'Sign In' : 'Sign Up'}
