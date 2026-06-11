@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import MainLayout from "./components/MainLayout";
 import ChatInterface from "./components/ChatInterface";
 import Login from "./components/Login";
@@ -12,8 +12,8 @@ const SESSION_STORAGE_KEY = 'quizmaker_current_session_id';
 const SESSIONS_CACHE_KEY = 'quizmaker_sessions_cache';
 
 function App() {
-  const [session, setSession] = useState(null);
-  const [bootStatus, setBootStatus] = useState('INITIALIZING'); // 'INITIALIZING', 'AUTHENTICATING', 'READY', 'UNAUTHENTICATED'
+  const [user, setUser] = useState(null);
+  const [bootStatus, setBootStatus] = useState('INITIALIZING');
   const [messages, setMessages] = useState([]);
   const [history, setHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -31,11 +31,10 @@ function App() {
   });
   const [currentSessionId, setCurrentSessionId] = useState(null);
   const [abortController, setAbortController] = useState(null);
-  const isRestoringSessionRef = React.useRef(false);
-  const [view, setView] = useState('chat'); // 'chat', 'quiz', 'summary'
+  const [view, setView] = useState('chat');
   const [quizData, setQuizData] = useState(null);
   const [quizScore, setQuizScore] = useState(0);
-  const [saveStatus, setSaveStatus] = useState('synced'); // 'synced', 'saving', 'error'
+  const [saveStatus, setSaveStatus] = useState('synced');
 
   const updateCurrentSessionId = useCallback((id) => {
     setCurrentSessionId(id);
@@ -45,7 +44,6 @@ function App() {
       localStorage.removeItem(SESSION_STORAGE_KEY);
     }
   }, []);
-
 
   const fetchSessions = useCallback(async (userId) => {
     try {
@@ -71,14 +69,28 @@ function App() {
   }, []);
 
   const handleLogout = useCallback(async () => {
-    localStorage.removeItem(SESSION_STORAGE_KEY);
-    await supabase.auth.signOut();
-  }, []);
+    try {
+      await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (e) {
+      console.error('Logout error:', e);
+    } finally {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+      setUser(null);
+      setSessions([]);
+      updateCurrentSessionId(null);
+      setMessages([]);
+      setHistory([]);
+      setBootStatus('UNAUTHENTICATED');
+    }
+  }, [updateCurrentSessionId]);
 
   const saveSessionToDb = useCallback(
     async (updatedHistory, topic, sessionId) => {
-      if (!session) {
-        console.warn("[Debug] saveSessionToDb called without session");
+      if (!user) {
+        console.warn("[Debug] saveSessionToDb called without user");
         return;
       }
 
@@ -90,13 +102,13 @@ function App() {
             .from("chat_sessions")
             .update({ history: updatedHistory, topic })
             .eq("id", targetId);
-          await fetchSessions(session.user.id);
+          await fetchSessions(user.id);
         } else {
           const { data, error } = await supabase
             .from("chat_sessions")
             .insert([
               {
-                user_id: session.user.id,
+                user_id: user.id,
                 topic: topic || "New Chat",
                 history: updatedHistory,
               },
@@ -105,7 +117,7 @@ function App() {
           
           if (error) throw error;
           updateCurrentSessionId(data[0].id);
-          await fetchSessions(session.user.id);
+          await fetchSessions(user.id);
         }
         setSaveStatus('synced');
       } catch (error) {
@@ -113,14 +125,12 @@ function App() {
         setSaveStatus('error');
       }
     },
-    [session, currentSessionId, fetchSessions],
+    [user, currentSessionId, fetchSessions, updateCurrentSessionId],
   );
 
   const handleSendMessage = useCallback(
     async (text) => {
-      // Ensure we are in chat view when sending messages
       setView('chat');
-      
       let sessionId = currentSessionId;
 
       const userMsg = {
@@ -134,45 +144,14 @@ function App() {
       const controller = new AbortController();
       setAbortController(controller);
 
-      const timeoutId = setTimeout(() => {
-        controller.abort();
-      }, 45000);
-
       try {
-        let currentSession = session;
-
-        if (!currentSession) {
-          const getSessionWithTimeout = async (timeoutMs = 5000) => {
-            const timeoutPromise = new Promise((_, reject) =>
-              setTimeout(() => reject(new Error("SUPABASE_SESSION_TIMEOUT")), timeoutMs)
-            );
-            return Promise.race([
-              supabase.auth.getSession(),
-              timeoutPromise
-            ]);
-          };
-
-          try {
-            const { data: { session: fetchedSession } } = await getSessionWithTimeout();
-            currentSession = fetchedSession;
-          } catch (e) {
-            console.error("Session retrieval failed or timed out:", e);
-            throw e;
-          }
-        }
-
-        if (!currentSession) {
-          throw new Error("Your session has expired. Please log in again.");
-        }
-
-        // Create session immediately if this is a new chat
         if (!sessionId) {
           const initialTopic = text.length > 30 ? text.substring(0, 30) + "..." : text;
           const { data: sessionData, error: sessionError } = await supabase
             .from("chat_sessions")
             .insert([
               {
-                user_id: currentSession.user.id,
+                user_id: user.id,
                 topic: initialTopic,
                 history: [],
               },
@@ -184,7 +163,7 @@ function App() {
           } else if (sessionData && sessionData.length > 0) {
             sessionId = sessionData[0].id;
             updateCurrentSessionId(sessionId);
-            await fetchSessions(currentSession.user.id);
+            await fetchSessions(user.id);
           }
         }
 
@@ -192,8 +171,8 @@ function App() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${currentSession.access_token}`,
           },
+          credentials: 'include',
           signal: controller.signal,
           body: JSON.stringify({
             message: text,
@@ -205,17 +184,14 @@ function App() {
           const errorText = await response.text();
           console.error(`Server Error ${response.status}:`, errorText);
           let errorMsg = `Server responded with ${response.status}`;
-          try {
-            const errorData = JSON.parse(errorText);
-            errorMsg = errorData.error || errorMsg;
-          } catch (e) {}
+          const errorData = JSON.parse(errorText);
+          errorMsg = errorData.error || errorMsg;
           throw new Error(errorMsg);
         }
 
         const data = await response.json();
         const rawResponse = data.raw || "";
 
-        // Use centralized parser for consistent results
         const { title, thought, final, structured } = parseAIResponse(rawResponse);
         const displayText = structured.text || final;
 
@@ -243,7 +219,6 @@ function App() {
             ? (title || (text.length > 30 ? text.substring(0, 30) + "..." : text))
             : sessions.find((s) => s.id === currentSessionId)?.topic || "Chat";
         
-        // Save to DB in the background without blocking the UI
         saveSessionToDb(updatedHistory, topic, sessionId).catch((e) => {
           console.error("[Debug] Background save failed:", e);
           setSaveStatus('error');
@@ -267,7 +242,7 @@ function App() {
         setAbortController(null);
       }
     },
-    [session, history, messages, sessions, currentSessionId, saveSessionToDb],
+    [user, history, sessions, currentSessionId, saveSessionToDb, fetchSessions, updateCurrentSessionId],
   );
 
   const handleStartQuiz = useCallback(async () => {
@@ -276,49 +251,13 @@ function App() {
     const controller = new AbortController();
     setAbortController(controller);
 
-    const timeoutId = setTimeout(() => {
-      controller.abort();
-    }, 45000);
-
     try {
-      let currentSession = session;
-
-      if (!currentSession) {
-        const getSessionWithTimeout = async (timeoutMs = 5000) => {
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("SUPABASE_SESSION_TIMEOUT")), timeoutMs)
-          );
-          return Promise.race([
-            supabase.auth.getSession(),
-            timeoutPromise
-          ]);
-        };
-
-        try {
-          const { data: { session: fetchedSession } } = await getSessionWithTimeout();
-          currentSession = fetchedSession;
-        } catch (e) {
-          console.error("Session retrieval failed in handleStartQuiz:", e);
-          throw e;
-        }
-      }
-
-      if (!currentSession) {
-        const { data: recovery } = await supabase.auth.getSession();
-        currentSession = recovery?.session;
-      }
-
-      if (!currentSession) {
-        setSession(null);
-        throw new Error("Your session has expired. Please log in again.");
-      }
-
       const response = await fetch(`${API_BASE_URL}/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${currentSession.access_token}`,
         },
+        credentials: 'include',
         signal: controller.signal,
         body: JSON.stringify({
           message: "Now, start a mock quiz based on the notes provided above.",
@@ -336,7 +275,6 @@ function App() {
       const data = await response.json();
       const rawResponse = data.raw || "";
 
-      // Use centralized parser for consistent results
       const { thought, final, structured } = parseAIResponse(rawResponse);
       const displayText = structured.text || final;
 
@@ -358,7 +296,6 @@ function App() {
         ]);
       }
 
-      // Immediately stop loading
       setIsLoading(false);
       setAbortController(null);
 
@@ -377,7 +314,6 @@ function App() {
       const topic =
         sessions.find((s) => s.id === currentSessionId)?.topic ||
         "Quiz Session";
-      // Save to DB in the background
       saveSessionToDb(updatedHistory, topic, currentSessionId).catch((e) => {
         console.error("Background save failed:", e);
         setSaveStatus('error');
@@ -400,7 +336,7 @@ function App() {
       setIsLoading(false);
       setAbortController(null);
     }
-  }, [session, history, sessions, currentSessionId, saveSessionToDb]);
+  }, [user, history, sessions, currentSessionId, saveSessionToDb]);
 
   const stopGenerating = useCallback(() => {
     if (abortController) {
@@ -417,21 +353,8 @@ function App() {
     setView('chat');
   }, [updateCurrentSessionId]);
 
-  const handleLoadSession = useCallback(async (sessionId, providedSession = null) => {
+  const handleLoadSession = useCallback(async (sessionId) => {
     try {
-      // Auth Guard: Verify current authentication state
-      let authSession = providedSession;
-      if (!authSession) {
-        const { data: { session: fetchedSession } } = await supabase.auth.getSession();
-        authSession = fetchedSession;
-      }
-      
-      if (!authSession) {
-        console.warn("No active session found during load. Redirecting to login.");
-        setSession(null);
-        return;
-      }
-
       const { data, error } = await supabase
         .from("chat_sessions")
         .select("*")
@@ -462,10 +385,6 @@ function App() {
       setMessages(loadedMessages);
     } catch (error) {
       console.error("Error loading session:", error);
-      // Avoid logging user out on every load error; only if it's an auth error
-      if (error.message?.includes("auth") || error.status === 401) {
-        setSession(null);
-      }
     }
   }, [updateCurrentSessionId]);
 
@@ -534,13 +453,12 @@ function App() {
     setIsLoading(true);
     
     try {
-      // Send the answer to the AI to get feedback and the next question
       const response = await fetch(`${API_BASE_URL}/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token}`,
         },
+        credentials: 'include',
         body: JSON.stringify({
           message: option,
           history: history,
@@ -568,7 +486,7 @@ function App() {
     } finally {
       setIsLoading(false);
     }
-  }, [session, history]);
+  }, [user, history]);
 
   useEffect(() => {
     let isSubscribed = true;
@@ -582,33 +500,37 @@ function App() {
 
     const bootSequence = async () => {
       try {
-        // 1. Auth Resolution (with 5s timeout)
-        const { data: { session: initialSession } } = await withTimeout(
-          supabase.auth.getSession(),
+        // 1. Auth Resolution via custom endpoint (with 5s timeout)
+        const response = await withTimeout(
+          fetch(`${API_BASE_URL}/auth/me`, {
+            method: 'GET',
+            credentials: 'include',
+          }),
           5000,
           "Auth session check"
         );
-        
-        if (!initialSession) {
+
+        if (!response.ok) {
           if (isSubscribed) setBootStatus('UNAUTHENTICATED');
           return;
         }
 
-        if (isSubscribed) {
-          setSession(initialSession);
-          setBootStatus('AUTHENTICATING');
-        }
+        const data = await response.json();
 
-        // 2. Context Restoration (Parallel with individual timeouts)
-        // We wrap each task so that one failing doesn't block the others or the boot process
+        if (!isSubscribed) return;
+
+        setUser(data.user);
+        setBootStatus('AUTHENTICATING');
+
+        // 2. Context Restoration
         await Promise.all([
-          withTimeout(fetchSessions(initialSession.user.id), 7000, "Fetch sessions")
+          withTimeout(fetchSessions(data.user.id), 7000, "Fetch sessions")
             .catch(e => console.warn("[Boot] fetchSessions failed/timed out, continuing...", e)),
           (async () => {
             const savedSessionId = localStorage.getItem(SESSION_STORAGE_KEY);
             if (savedSessionId) {
               try {
-                await withTimeout(handleLoadSession(savedSessionId, initialSession), 7000, "Load active session");
+                await withTimeout(handleLoadSession(savedSessionId), 7000, "Load active session");
               } catch (e) {
                 console.warn("[Boot] handleLoadSession failed/timed out, continuing...", e);
               }
@@ -620,14 +542,12 @@ function App() {
       } catch (error) {
         console.error("Critical boot sequence failure:", error);
         if (isSubscribed) {
-          // If auth failed or timed out, go to UNAUTHENTICATED.
-          // If it's a different error but we have a session, we might still want to try READY.
           setBootStatus('UNAUTHENTICATED');
         }
       }
     };
 
-    // Global watchdog: if boot takes > 15s, force a terminal state to avoid infinite loading
+    // Global watchdog
     const bootWatchdog = setTimeout(() => {
       if (isSubscribed && (bootStatus === 'INITIALIZING' || bootStatus === 'AUTHENTICATING')) {
         console.error("[Boot] Global watchdog triggered: boot sequence took too long. Forcing READY state.");
@@ -637,53 +557,11 @@ function App() {
 
     bootSequence();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!isSubscribed) return;
-      
-      if (event === 'SIGNED_IN') {
-        setSession(session);
-        setBootStatus('AUTHENTICATING');
-        try {
-          await fetchSessions(session.user.id);
-          const savedSessionId = localStorage.getItem(SESSION_STORAGE_KEY);
-          if (savedSessionId) {
-            await handleLoadSession(savedSessionId, session);
-          }
-          setBootStatus('READY');
-        } catch (e) {
-          console.error("Login restoration failed:", e);
-          setBootStatus('READY'); // Still go to ready so user can at least see the app
-        }
-        return;
-      }
-
-      if (event === 'SIGNED_OUT') {
-        setSession(null);
-        setBootStatus('UNAUTHENTICATED');
-        setSessions([]);
-        updateCurrentSessionId(null);
-        return;
-      }
-
-      // Only allow other auth events (like TOKEN_REFRESHED) after boot is READY
-      if (bootStatus !== 'READY') return;
-      
-      setSession(session);
-      
-      if (session && event === 'TOKEN_REFRESHED') {
-        try {
-          await fetchSessions(session.user.id);
-        } catch (e) {
-          console.error("Auth change session fetch error:", e);
-        }
-      }
-    });
-
     return () => {
       isSubscribed = false;
-      subscription.unsubscribe();
+      clearTimeout(bootWatchdog);
     };
-  }, [handleLoadSession, fetchSessions, updateCurrentSessionId]);
+  }, [fetchSessions, handleLoadSession]);
 
   return (
     <>
@@ -694,11 +572,11 @@ function App() {
             <p className="text-xl font-bold text-[#7b9acc]">Preparing TUON AI</p>
           </div>
         </div>
-      ) : !session ? (
+      ) : !user ? (
         <Login />
       ) : (
         <MainLayout
-          user={session?.user}
+          user={user}
           onNewChat={handleNewChat}
           onLogout={handleLogout}
           sessions={sessions}

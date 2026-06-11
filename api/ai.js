@@ -1,3 +1,4 @@
+/* global process */
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import "dotenv/config";
 
@@ -95,9 +96,11 @@ export async function handleChat(message, history) {
   } catch (error) {
     console.error("[AI] Error during AI generation:", error);
     if (error.message === "AI_TIMEOUT") {
-      throw new Error(
+      const timeoutError = new Error(
         "The AI is taking too long to respond. Please try again.",
       );
+      timeoutError.cause = error;
+      throw timeoutError;
     }
     throw error;
   }

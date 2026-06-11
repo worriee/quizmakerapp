@@ -1,0 +1,202 @@
+/* global process */
+import express from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import cookieParser from 'cookie-parser';
+import { createClient } from '@supabase/supabase-js';
+
+const router = express.Router();
+router.use(cookieParser());
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
+const JWT_EXPIRY = '7d';
+
+// Server-side Supabase client using service_role key to bypass RLS
+const supabaseService = createClient(
+  process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  }
+);
+
+const authenticate = (req, res, next) => {
+  console.log('[Auth] Authenticating request...');
+  try {
+    const token = req.cookies.token;
+    if (!token) {
+      console.log('[Auth] No token found in cookies');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    console.log('[Auth] Token found, verifying...');
+    const decoded = jwt.verify(token, JWT_SECRET);
+    console.log('[Auth] Token verified for user:', decoded.email, '| id:', decoded.id);
+    console.log('[Auth] Service role key loaded:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    console.error('[Auth] Token verification failed:', error.message);
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+};
+
+// POST /api/auth/signup
+router.post('/signup', async (req, res) => {
+  console.log('[Auth] Signup attempt for:', req.body.email);
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    // Check if user already exists
+    const { data: existingUser } = await supabaseService
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .single();
+
+    if (existingUser) {
+      return res.status(400).json({ error: 'An account with this email already exists' });
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Create user in profiles table
+    const { data: newUser, error: insertError } = await supabaseService
+      .from('profiles')
+      .insert([
+        {
+          email,
+          password_hash: passwordHash,
+        },
+      ])
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error creating user:', insertError);
+      return res.status(500).json({ error: 'Failed to create account' });
+    }
+
+    // Sign JWT
+    const token = jwt.sign(
+      { id: newUser.id, email: newUser.email },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRY }
+    );
+
+    // Set HTTP-only cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+    
+    res.status(201).json({ user: { id: newUser.id, email: newUser.email } });
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+});
+
+// POST /api/auth/login
+router.post('/login', async (req, res) => {
+  console.log('[Auth] Login attempt for:', req.body.email);
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Find user
+    const { data: user, error: fetchError } = await supabaseService
+      .from('profiles')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (fetchError || !user) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    // Guard: existing users migrated from Supabase Auth may lack password_hash
+    if (!user.password_hash) {
+      console.warn('[Auth] User found but password_hash is missing — account not migrated to JWT auth:', email);
+      return res.status(401).json({ error: 'This account was created before the system update. Please contact support or reset your password.' });
+    }
+    
+    // Diagnostic: inspect password_hash state for this user
+    console.log('[Auth] Login user record — id:', user.id, '| password_hash present:', !!user.password_hash);
+    
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    // Sign JWT
+    const token = jwt.sign(
+      { id: user.id, email: user.email },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRY }
+    );
+
+    // Set HTTP-only cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+    
+    res.json({ user: { id: user.id, email: user.email } });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+});
+
+// POST /api/auth/logout
+router.post('/logout', (req, res) => {
+  res.clearCookie('token');
+  res.json({ ok: true });
+});
+
+// GET /api/auth/me
+router.get('/me', authenticate, async (req, res) => {
+  try {
+    console.log('[Auth] /me lookup — req.user.id:', req.user.id, '| req.user.email:', req.user.email);
+    const { data: user, error: fetchError } = await supabaseService
+      .from('profiles')
+      .select('id, email')
+      .eq('id', req.user.id)
+      .single();
+
+    if (fetchError || !user) {
+      console.warn('[Auth] /me user not found — fetchError:', JSON.stringify(fetchError), '| userId:', req.user.id);
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    console.log('[Auth] /me user found:', user.id, user.email);
+    res.json({ user });
+  } catch (error) {
+    console.error('[Auth] Auth me error:', error);
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
+export default router;
