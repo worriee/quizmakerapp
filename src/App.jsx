@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import MainLayout from "./components/MainLayout";
 import ChatInterface from "./components/ChatInterface";
 import Login from "./components/Login";
 import QuizInterface from "./components/QuizInterface";
 import QuizSummary from "./components/QuizSummary";
+import QuizSetup from "./components/QuizSetup";
 import { parseAIResponse } from "./utils/aiParser";
 
 const API_BASE_URL = "/api";
@@ -13,6 +14,12 @@ const SESSIONS_CACHE_KEY = 'quizmaker_sessions_cache';
 function App() {
   const [user, setUser] = useState(null);
   const [bootStatus, setBootStatus] = useState('INITIALIZING');
+  const bootStatusRef = useRef('INITIALIZING');
+
+  const updateBootStatus = useCallback((status) => {
+    setBootStatus(status);
+    bootStatusRef.current = status;
+  }, []);
   const [messages, setMessages] = useState([]);
   const [history, setHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,7 +40,10 @@ function App() {
   const [view, setView] = useState('chat');
   const [quizData, setQuizData] = useState(null);
   const [quizScore, setQuizScore] = useState(0);
+  const [quizParams, setQuizParams] = useState({ itemCount: 5, difficulty: 'Normal' });
+  const [wrongAnswers, setWrongAnswers] = useState([]);
   const [saveStatus, setSaveStatus] = useState('synced');
+  const [selectedModel, setSelectedModel] = useState('gemini-3.1-flash-lite');
 
   const updateCurrentSessionId = useCallback((id) => {
     setCurrentSessionId(id);
@@ -180,6 +190,7 @@ function App() {
           body: JSON.stringify({
             message: text,
             history: history,
+            model: selectedModel,
           }),
         });
 
@@ -245,11 +256,36 @@ function App() {
         setAbortController(null);
       }
     },
-    [user, history, sessions, currentSessionId, saveSessionToDb, fetchSessions, updateCurrentSessionId],
+    [user, history, sessions, currentSessionId, saveSessionToDb, fetchSessions, updateCurrentSessionId, selectedModel],
   );
 
-  const handleStartQuiz = useCallback(async () => {
+  const handleStartQuiz = useCallback(async (params = null) => {
     setIsLoading(true);
+    
+    let finalParams = { ...quizParams };
+    if (params) {
+      finalParams = params;
+      setQuizParams(params);
+    }
+
+    // Construct dynamic prompt
+    const difficultyPrompts = {
+      Easy: "Generate questions strictly based on the notes provided. Focus on recall and basic understanding.",
+      Normal: "Generate a mix of direct note-based questions and situational application questions. Require the user to apply concepts to simple scenarios.",
+      Hard: "Generate primarily situational and complex scenarios. Questions should require critical thinking and synthesis of multiple concepts from the notes."
+    };
+
+    let prompt = `Now, start a mock quiz based on the notes provided above.
+    Number of items: ${finalParams.itemCount}.
+    Difficulty: ${finalParams.difficulty}.
+    ${difficultyPrompts[finalParams.difficulty]}`;
+
+    if (params?.growthAreas && params.growthAreas.length > 0) {
+      const missed = params.growthAreas.map(a => `Q: ${a.question} (Correct: ${a.correctOption})`).join('\n');
+      prompt += `\n\nFocus specifically on these weak points from the previous attempt:\n${missed}`;
+    }
+
+    setWrongAnswers([]); // Reset wrong answers for new quiz
 
     const controller = new AbortController();
     setAbortController(controller);
@@ -263,8 +299,9 @@ function App() {
         credentials: 'include',
         signal: controller.signal,
         body: JSON.stringify({
-          message: "Now, start a mock quiz based on the notes provided above.",
+          message: prompt,
           history: history,
+          model: selectedModel,
         }),
       });
 
@@ -307,7 +344,7 @@ function App() {
         {
           role: "user",
           parts: [
-            { text: "Start a mock quiz based on the notes provided above." },
+            { text: prompt },
           ],
         },
         { role: "model", parts: [{ text: rawResponse }] },
@@ -339,7 +376,7 @@ function App() {
       setIsLoading(false);
       setAbortController(null);
     }
-  }, [user, history, sessions, currentSessionId, saveSessionToDb]);
+  }, [user, history, sessions, currentSessionId, saveSessionToDb, selectedModel]);
 
   const stopGenerating = useCallback(() => {
     if (abortController) {
@@ -464,17 +501,28 @@ function App() {
         body: JSON.stringify({
           message: option,
           history: history,
+          model: selectedModel,
         }),
       });
 
       if (!response.ok) throw new Error("Failed to get quiz feedback");
 
       const data = await response.json();
-      const { structured } = parseAIResponse(data.raw || "");
+      const rawResponse = data.raw || "";
+      const { structured } = parseAIResponse(rawResponse);
 
       if (structured.type === "quiz") {
         if (structured.feedback?.isCorrect) {
           setQuizScore((prev) => prev + 1);
+        } else if (structured.feedback) {
+          // Track wrong answers for growth areas
+          setWrongAnswers((prev) => [
+            ...prev,
+            {
+              question: quizData?.text || "Unknown Question",
+              correctOption: structured.feedback.text || "No correct answer provided",
+            },
+          ]);
         }
         
         if (structured.isFinished) {
@@ -483,12 +531,28 @@ function App() {
           setQuizData(structured);
         }
       }
+
+      // Update history to ensure AI progresses to the next question
+      const updatedHistory = [
+        ...history,
+        { role: "user", parts: [{ text: option }] },
+        { role: "model", parts: [{ text: rawResponse }] },
+      ];
+      setHistory(updatedHistory);
+
+      // Persist progress to DB
+      const topic = sessions.find((s) => s.id === currentSessionId)?.topic || "Quiz Session";
+      saveSessionToDb(updatedHistory, topic, currentSessionId).catch((e) => {
+        console.error("Background save failed:", e);
+        setSaveStatus('error');
+      });
+
     } catch (error) {
       console.error("Error handling quiz answer:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [user, history]);
+  }, [user, history, sessions, currentSessionId, saveSessionToDb, selectedModel]);
 
   useEffect(() => {
     let isSubscribed = true;
@@ -513,7 +577,7 @@ function App() {
         );
 
         if (!response.ok) {
-          if (isSubscribed) setBootStatus('UNAUTHENTICATED');
+          if (isSubscribed) updateBootStatus('UNAUTHENTICATED');
           return;
         }
 
@@ -522,7 +586,7 @@ function App() {
         if (!isSubscribed) return;
 
         setUser(data.user);
-        setBootStatus('AUTHENTICATING');
+        updateBootStatus('AUTHENTICATING');
 
         // 2. Context Restoration
         await Promise.all([
@@ -540,20 +604,20 @@ function App() {
           })()
         ]);
 
-        if (isSubscribed) setBootStatus('READY');
+        if (isSubscribed) updateBootStatus('READY');
       } catch (error) {
         console.error("Critical boot sequence failure:", error);
         if (isSubscribed) {
-          setBootStatus('UNAUTHENTICATED');
+          updateBootStatus('UNAUTHENTICATED');
         }
       }
     };
 
     // Global watchdog
     const bootWatchdog = setTimeout(() => {
-      if (isSubscribed && (bootStatus === 'INITIALIZING' || bootStatus === 'AUTHENTICATING')) {
+      if (isSubscribed && (bootStatusRef.current === 'INITIALIZING' || bootStatusRef.current === 'AUTHENTICATING')) {
         console.error("[Boot] Global watchdog triggered: boot sequence took too long. Forcing READY state.");
-        setBootStatus('READY');
+        updateBootStatus('READY');
       }
     }, 15000);
 
@@ -592,29 +656,39 @@ function App() {
             const currentTopic = sessions.find(s => s.id === currentSessionId)?.topic || "Chat";
             saveSessionToDb(history, currentTopic, currentSessionId);
           }}
+          selectedModel={selectedModel}
+          setSelectedModel={setSelectedModel}
         >
           {view === 'chat' && (
             <ChatInterface
               messages={messages}
               onSendMessage={handleSendMessage}
               isLoading={isLoading}
-              onStartQuiz={handleStartQuiz}
+              onStartQuiz={() => setView('quizSetup')}
               onStopGenerating={stopGenerating}
             />
           )}
+          {view === 'quizSetup' && (
+            <QuizSetup
+              onStart={handleStartQuiz}
+              onExit={() => setView('chat')}
+            />
+          )}
           {view === 'quiz' && (
-            <QuizInterface 
-              quizData={quizData} 
-              onAnswer={handleQuizAnswer} 
-              onExit={() => setView('chat')} 
+            <QuizInterface
+              quizData={quizData}
+              onAnswer={handleQuizAnswer}
+              onExit={() => setView('chat')}
             />
           )}
           {view === 'summary' && (
-            <QuizSummary 
-              summary={quizData?.summary} 
-              score={quizScore} 
-              total={quizData?.progress?.total} 
-              onReset={handleNewChat} 
+            <QuizSummary
+              summary={quizData?.summary}
+              score={quizScore}
+              total={quizData?.progress?.total}
+              onReset={handleNewChat}
+              onGrowthRetry={() => handleStartQuiz({ ...quizParams, growthAreas: wrongAnswers })}
+              hasWrongAnswers={wrongAnswers.length > 0}
             />
           )}
         </MainLayout>

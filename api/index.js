@@ -241,13 +241,13 @@ app.post('/api/chat', async (req, res) => {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    const { message, history } = req.body;
+    const { message, history, model } = req.body;
 
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    const rawAIResponse = await handleChat(message, history || []);
+    const rawAIResponse = await handleChat(message, history || [], model);
     res.json({ raw: rawAIResponse });
   } catch (error) {
     console.error('[Server] Internal Server Error:', error);

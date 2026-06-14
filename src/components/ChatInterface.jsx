@@ -47,7 +47,7 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
             className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-[75%] rounded-2xl px-5 py-3 ${
+              className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-5 py-3 ${
                 msg.role === "user"
                   ? "bg-[#7b9acc] text-white rounded-br-sm"
                   : "bg-[#FCF6F5] text-black border border-[#7b9acc]/20 rounded-bl-sm"
@@ -110,7 +110,7 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
             </button>
           </div>
         </form>
-        <p className="text-center text-[10px] text-black/40 mt-3">
+        <p className="text-center text-[10px] text-black/40 mt-3 italic">
           AI still make mistakes always double check
         </p>
       </div>

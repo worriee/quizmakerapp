@@ -1,4 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
+import pinIcon from '../assets/thumbtacks.png';
+import renameIcon from '../assets/edit.png';
+import deleteIcon from '../assets/delete.png';
+import logoutIcon from '../assets/logout.png';
+
+import ModelSelector from './ModelSelector';
 
 const MainLayout = ({
   user,
@@ -12,9 +18,11 @@ const MainLayout = ({
   onRenameSession,
   onTogglePin,
   saveStatus = 'synced',
-  onRetrySave
+  onRetrySave,
+  selectedModel,
+  setSelectedModel
 }) => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(typeof window !== 'undefined' ? window.innerWidth >= 1024 : true);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState("");
@@ -101,9 +109,7 @@ const MainLayout = ({
           <>
             <div className="flex items-center gap-2 truncate flex-1">
               {session.pinned && (
-                <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3 text-[#7b9acc] shrink-0">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.224A1.2 1.2 0 0116.125 5.625c.134.195.326.347.56.44a6.258 6.258 0 015.087 5.087c.093.234.245.426.44.56a1.2 1.2 0 01.44 1.2v8.25a1.2 1.2 0 01-1.2 1.2h-3.5a1.2 1.2 0 01-1.2-1.2v-4.5a1.2 1.2 0 00-1.2-1.2h-3a1.2 1.2 0 00-1.2 1.2v4.5a1.2 1.2 0 01-1.2 1.2h-3.5a1.2 1.2 0 01-1.2-1.2v-8.25a1.2 1.2 0 01.44-1.2c.194-.114.386-.266.56-.44a6.258 6.258 0 015.087-5.087c.093-.234.245-.426.44-.56a1.2 1.2 0 011.2-.44z" />
-                </svg>
+                <img src={pinIcon} alt="Pin" className="w-3 h-3 shrink-0" />
               )}
               <span className="truncate">{session.topic}</span>
             </div>
@@ -121,36 +127,31 @@ const MainLayout = ({
         {openMenuId === session.id && (
           <div
             ref={menuRef}
-            className="absolute right-2 top-8 w-32 bg-[#FCF6F5] border border-[#7b9acc]/20 rounded-lg shadow-lg z-50 py-1"
+            className="absolute right-0 top-full w-40 bg-[#FCF6F5] border border-[#7b9acc]/20 rounded-xl shadow-xl z-50 py-1.5 animate-in fade-in zoom-in-95 duration-100"
           >
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onTogglePin(session.id, session.pinned);
               }}
-              className="w-full text-left px-3 py-2 text-sm text-black hover:bg-[#7b9acc]/10 flex items-center gap-2"
+              className="w-full text-left px-3 py-2 text-sm text-black/80 hover:bg-[#7b9acc]/10 hover:text-black flex items-center gap-3 transition-colors"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17.649 4.351 15.651 2.351a.75.75 0 00-1.061 0L12 4.724l-3.335-2.373a.75.75 0 00-1.061 0L4.351 4.351a.75.75 0 000 1.061l1.293 1.293a.75.75 0 001.061 0L7.5 6.149V15a2.25 2.25 0 002.25 2.25h5.5a2.25 2.25 0 002.25-2.25V6.149l1.293-1.293a.75.75 0 000-1.061z" />
-              </svg>
+              <img src={pinIcon} alt="Pin" className="w-4 h-4 opacity-70" />
               {session.pinned ? 'Unpin' : 'Pin'}
             </button>
             <button
               onClick={(e) => startRename(e, session)}
-              className="w-full text-left px-3 py-2 text-sm text-black hover:bg-[#7b9acc]/10 flex items-center gap-2"
+              className="w-full text-left px-3 py-2 text-sm text-black/80 hover:bg-[#7b9acc]/10 hover:text-black flex items-center gap-3 transition-colors"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 17.25l.53-1.625a4.5 4.5 0 011.13-1.897l8.875-8.875z" />
-              </svg>
+              <img src={renameIcon} alt="Rename" className="w-4 h-4 opacity-70" />
               Rename
             </button>
+            <div className="my-1 border-t border-[#7b9acc]/10" />
             <button
               onClick={(e) => handleDelete(e, session.id)}
-              className="w-full text-left px-3 py-2 text-sm text-black font-bold hover:bg-[#7b9acc]/20 flex items-center gap-2"
+              className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.244H7.632a2.25 2.25 0 01-2.244-2.244L5.08 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.661-.897-3.384-3.586-3.384H6.286c-1.661 0-3.384.723-3.384 3.384v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-              </svg>
+              <img src={deleteIcon} alt="Delete" className="w-4 h-4 opacity-80" />
               Delete
             </button>
           </div>
@@ -222,15 +223,19 @@ className={`fixed inset-y-0 left-0 z-50 bg-[#FCF6F5] border-r border-[#7b9acc]/2
       {/* Main Content */}
       <main className="flex-1 flex flex-col relative overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#7b9acc]/20 bg-[#FCF6F5]">
+        <div className="flex items-center justify-between p-4 border-b border-[#7b9acc]/20 bg-[#FCF6F5] relative">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 hover:bg-[#7b9acc]/10 rounded-lg transition-all"
+              className="p-3 sm:p-2 hover:bg-[#7b9acc]/10 rounded-lg transition-all"
             >
               <span className="text-xl">☰</span>
             </button>
              <span className="font-bold text-lg tracking-tight text-black">TUON AI</span>
+          </div>
+
+          <div className="absolute left-1/2 -translate-x-1/2">
+            <ModelSelector selectedModel={selectedModel} setSelectedModel={setSelectedModel} />
           </div>
           
           <div className="flex items-center gap-4">
@@ -296,9 +301,7 @@ onMouseDown={(e) => {
                       onClick={onLogout}
                       className="w-full mt-6 flex items-center justify-center gap-2 px-3 py-2.5 bg-[#FCF6F5] text-black rounded-xl hover:bg-[#7b9acc]/10 transition-all text-sm font-bold border border-[#7b9acc]/30"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3.375-3.375a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5a.75.75 0 01.75-.75z" />
-                      </svg>
+                      <img src={logoutIcon} alt="Logout" className="w-4 h-4 opacity-70" />
                       Logout
                     </button>
                   </div>

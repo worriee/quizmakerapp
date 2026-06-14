@@ -5,6 +5,24 @@ import "dotenv/config";
 // Initialize the Google Generative AI client
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
+const MODEL_CONFIGS = {
+  'gemma-4-31b': {
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    apiKeyEnv: 'GOOGLE_API_KEY',
+    modelId: 'gemma-4-31b-it',
+  },
+  'step-3.7-flash': {
+    baseUrl: 'https://integrate.api.nvidia.com/v1',
+    apiKeyEnv: 'NVIDIA_API_KEY',
+    modelId: 'stepfun/step-3.7-flash',
+  },
+  'glm-5.1': {
+    baseUrl: 'https://integrate.api.nvidia.com/v1',
+    apiKeyEnv: 'NVIDIA_API_KEY',
+    modelId: 'zhipu/glm-5.1',
+  },
+};
+
 /**
  * SYSTEM_PROMPT: Defines the AI's persona and the strict output format.
  * We use <thought> and <final> tags to separate internal reasoning from the user-facing response.
@@ -43,7 +61,8 @@ RESPONSE GUIDELINES (Inside <final>):
 
 TUTORING RULES:
 - In QUIZ MODE, ask only one question at a time.
-- Always provide feedback on the previous answer before moving to the next question.
+- Always provide feedback on the previous answer using the \`feedback\` object before moving to the next question.
+- CRITICAL: The \`text\` field in the quiz JSON must contain ONLY the new question text. Do NOT include feedback or conversational filler in the \`text\` field.
 - Ensure the <final> tag contains ONLY the response (plain text or JSON), no extra chatter outside the tags.
 `;
 
@@ -59,46 +78,120 @@ const timeoutPromise = (ms) =>
   );
 
 /**
- * handleChat: Manages the interaction with the Gemini model.
+ * callOpenAICompatibleAPI: Helper to call OpenAI-compatible endpoints.
+ * @param {Object} config - Model configuration.
+ * @param {string} message - Current user message.
+ * @param {Array} history - Chat history in SDK format.
+ * @returns {Promise<string>} - The raw text response.
+ */
+async function callOpenAICompatibleAPI(config, message, history) {
+  const apiKey = process.env[config.apiKeyEnv];
+  if (!apiKey) {
+    throw new Error(`API key not found for environment variable ${config.apiKeyEnv}`);
+  }
+
+  // Convert SDK history format [{role, parts: [{text}]}] to OpenAI format [{role, content}]
+  const messages = [
+    { role: "system", content: SYSTEM_PROMPT },
+    ...history.map(msg => ({
+      role: msg.role === "model" ? "assistant" : "user",
+      content: msg.parts?.[0]?.text || "",
+    })),
+    { role: "user", content: message },
+  ];
+
+  const response = await fetch(`${config.baseUrl}chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: config.modelId,
+      messages: messages,
+      temperature: 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(`API Error (${response.status}): ${errorData.error?.message || response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || "";
+}
+
+/**
+ * handleChat: Manages the interaction with the AI model.
  * @param {string} message - User input.
  * @param {Array} history - Chat history.
+ * @param {string} [modelId] - Optional model identifier.
  * @returns {Promise<string>} - The raw text response from the AI.
  */
-export async function handleChat(message, history) {
-  const model = genAI.getGenerativeModel({
-    model: "gemini-3.1-flash-lite",
-    systemInstruction: SYSTEM_PROMPT,
-  });
-  
-  const contents = [
-    ...history,
-    {
-      role: "user",
-      parts: [{ text: message }],
-    },
-  ];
-  
+export async function handleChat(message, history, modelId) {
+  // Default to SDK flow for gemini-3.1-flash-lite or if no modelId is provided
+  if (!modelId || modelId === "gemini-3.1-flash-lite") {
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3.1-flash-lite",
+      systemInstruction: SYSTEM_PROMPT,
+    });
+    
+    const contents = [
+      ...history,
+      {
+        role: "user",
+        parts: [{ text: message }],
+      },
+    ];
+    
+    try {
+      const responseText = await Promise.race([
+        (async () => {
+          const result = await model.generateContent({ contents });
+          const response = await result.response;
+          return response.text();
+        })(),
+        timeoutPromise(30000),
+      ]);
+      
+      if (!responseText || responseText.trim().length === 0) {
+        return "<thought>The AI returned an empty response. This can happen due to safety filters or unexpected model behavior.</thought><final>I'm sorry, I encountered an issue generating a response. Please try rephrasing your prompt or starting a new chat.</final>";
+      }
+      
+      return responseText;
+    } catch (error) {
+      console.error("[AI] SDK Error during AI generation:", error);
+      if (error.message === "AI_TIMEOUT") {
+        const timeoutError = new Error("The AI is taking too long to respond. Please try again.");
+        timeoutError.cause = error;
+        throw timeoutError;
+      }
+      throw error;
+    }
+  }
+
+  // OpenAI-compatible routing
+  const config = MODEL_CONFIGS[modelId];
+  if (!config) {
+    throw new Error(`Unsupported model ID: ${modelId}`);
+  }
+
   try {
     const responseText = await Promise.race([
-      (async () => {
-        const result = await model.generateContent({ contents });
-        const response = await result.response;
-        return response.text();
-      })(),
+      callOpenAICompatibleAPI(config, message, history),
       timeoutPromise(30000),
     ]);
-    
+
     if (!responseText || responseText.trim().length === 0) {
-      return "<thought>The AI returned an empty response. This can happen due to safety filters or unexpected model behavior.</thought><final>I'm sorry, I encountered an issue generating a response. Please try rephrasing your prompt or starting a new chat.</final>";
+      return "<thought>The AI returned an empty response.</thought><final>I'm sorry, I encountered an issue generating a response.</final>";
     }
-    
+
     return responseText;
   } catch (error) {
-    console.error("[AI] Error during AI generation:", error);
+    console.error(`[AI] Provider Error (${modelId}):`, error);
     if (error.message === "AI_TIMEOUT") {
-      const timeoutError = new Error(
-        "The AI is taking too long to respond. Please try again.",
-      );
+      const timeoutError = new Error("The AI is taking too long to respond. Please try again.");
       timeoutError.cause = error;
       throw timeoutError;
     }
