@@ -6,20 +6,20 @@ import "dotenv/config";
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
 const MODEL_CONFIGS = {
-  'gemma-4-31b': {
+  'gemini-3.1-flash-lite': {
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
     apiKeyEnv: 'GOOGLE_API_KEY',
-    modelId: 'gemma-4-31b-it',
+    modelId: 'gemini-3.1-flash-lite',
   },
   'step-3.7-flash': {
     baseUrl: 'https://integrate.api.nvidia.com/v1',
     apiKeyEnv: 'NVIDIA_API_KEY',
-    modelId: 'stepfun/step-3.7-flash',
+    modelId: 'stepfun-ai/step-3.7-flash',
   },
   'glm-5.1': {
     baseUrl: 'https://integrate.api.nvidia.com/v1',
     apiKeyEnv: 'NVIDIA_API_KEY',
-    modelId: 'zhipu/glm-5.1',
+    modelId: 'z-ai/glm-5.1',
   },
 };
 
@@ -71,10 +71,7 @@ TUTORING RULES:
  */
 const timeoutPromise = (ms) =>
   new Promise((_, reject) =>
-    setTimeout(() => {
-      console.log("[AI] Request timeout triggered");
-      reject(new Error("AI_TIMEOUT"));
-    }, ms),
+    setTimeout(() => reject(new Error("AI_TIMEOUT")), ms)
   );
 
 /**
@@ -87,7 +84,7 @@ const timeoutPromise = (ms) =>
 async function callOpenAICompatibleAPI(config, message, history) {
   const apiKey = process.env[config.apiKeyEnv];
   if (!apiKey) {
-    throw new Error(`API key not found for environment variable ${config.apiKeyEnv}`);
+    throw new Error(`API key not found ${config.apiKeyEnv}`);
   }
 
   // Convert SDK history format [{role, parts: [{text}]}] to OpenAI format [{role, content}]
@@ -100,7 +97,7 @@ async function callOpenAICompatibleAPI(config, message, history) {
     { role: "user", content: message },
   ];
 
-  const response = await fetch(`${config.baseUrl}chat/completions`, {
+  const response = await fetch(`${config.baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -130,51 +127,12 @@ async function callOpenAICompatibleAPI(config, message, history) {
  * @returns {Promise<string>} - The raw text response from the AI.
  */
 export async function handleChat(message, history, modelId) {
-  // Default to SDK flow for gemini-3.1-flash-lite or if no modelId is provided
-  if (!modelId || modelId === "gemini-3.1-flash-lite") {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-3.1-flash-lite",
-      systemInstruction: SYSTEM_PROMPT,
-    });
-    
-    const contents = [
-      ...history,
-      {
-        role: "user",
-        parts: [{ text: message }],
-      },
-    ];
-    
-    try {
-      const responseText = await Promise.race([
-        (async () => {
-          const result = await model.generateContent({ contents });
-          const response = await result.response;
-          return response.text();
-        })(),
-        timeoutPromise(30000),
-      ]);
-      
-      if (!responseText || responseText.trim().length === 0) {
-        return "<thought>The AI returned an empty response. This can happen due to safety filters or unexpected model behavior.</thought><final>I'm sorry, I encountered an issue generating a response. Please try rephrasing your prompt or starting a new chat.</final>";
-      }
-      
-      return responseText;
-    } catch (error) {
-      console.error("[AI] SDK Error during AI generation:", error);
-      if (error.message === "AI_TIMEOUT") {
-        const timeoutError = new Error("The AI is taking too long to respond. Please try again.");
-        timeoutError.cause = error;
-        throw timeoutError;
-      }
-      throw error;
-    }
-  }
-
-  // OpenAI-compatible routing
-  const config = MODEL_CONFIGS[modelId];
+  // Default to gemini-3.1-flash-lite if no modelId is provided
+  const effectiveModelId = modelId || 'gemini-3.1-flash-lite';
+  
+  const config = MODEL_CONFIGS[effectiveModelId];
   if (!config) {
-    throw new Error(`Unsupported model ID: ${modelId}`);
+    throw new Error(`Unsupported model ID: ${effectiveModelId}`);
   }
 
   try {
@@ -189,7 +147,7 @@ export async function handleChat(message, history, modelId) {
 
     return responseText;
   } catch (error) {
-    console.error(`[AI] Provider Error (${modelId}):`, error);
+    console.error(`[AI] Provider Error (${effectiveModelId}):`, error);
     if (error.message === "AI_TIMEOUT") {
       const timeoutError = new Error("The AI is taking too long to respond. Please try again.");
       timeoutError.cause = error;

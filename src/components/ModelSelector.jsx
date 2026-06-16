@@ -1,10 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 const MODELS = [
-  { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash' },
-  { id: 'gemma-4-31b', name: 'Gemma 4 31B' },
-  { id: 'step-3.7-flash', name: 'Step 3.7 Flash' },
-  { id: 'glm-5.1', name: 'GLM 5.1' },
+{ id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash' },
+{ id: 'step-3.7-flash', name: 'Step 3.7 Flash' },
+{ id: 'glm-5.1', name: 'GLM 5.1' },
 ];
 
 const ModelSelector = ({ selectedModel, setSelectedModel }) => {

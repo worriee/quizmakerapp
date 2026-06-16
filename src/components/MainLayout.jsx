@@ -214,9 +214,7 @@ className={`fixed inset-y-0 left-0 z-50 bg-[#FCF6F5] border-r border-[#7b9acc]/2
             </div>
           </div>
 
-          <div className="pt-4 border-t border-[#7b9acc]/20">
-            {/* User profile removed from here */}
-          </div>
+          <div className="pt-4 border-t border-[#7b9acc]/20" />
         </div>
       </aside>
 

@@ -24,28 +24,21 @@ const supabaseService = createClient(
 );
 
 const authenticate = (req, res, next) => {
-  console.log('[Auth] Authenticating request...');
   try {
     const token = req.cookies.token;
     if (!token) {
-      console.log('[Auth] No token found in cookies');
       return res.status(401).json({ error: 'Unauthorized' });
     }
-    console.log('[Auth] Token found, verifying...');
     const decoded = jwt.verify(token, JWT_SECRET);
-    console.log('[Auth] Token verified for user:', decoded.email, '| id:', decoded.id);
-    console.log('[Auth] Service role key loaded:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
     req.user = decoded;
     next();
-  } catch (error) {
-    console.error('[Auth] Token verification failed:', error.message);
+  } catch {
     return res.status(401).json({ error: 'Invalid token' });
   }
 };
 
 // POST /api/auth/signup
 router.post('/signup', async (req, res) => {
-  console.log('[Auth] Signup attempt for:', req.body.email);
   try {
     const { email, password } = req.body;
 
@@ -105,15 +98,13 @@ router.post('/signup', async (req, res) => {
     });
     
     res.status(201).json({ user: { id: newUser.id, email: newUser.email } });
-  } catch (error) {
-    console.error('Signup error:', error);
+  } catch {
     res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 });
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
-  console.log('[Auth] Login attempt for:', req.body.email);
   try {
     const { email, password } = req.body;
 
@@ -134,12 +125,8 @@ router.post('/login', async (req, res) => {
 
     // Guard: existing users migrated from Supabase Auth may lack password_hash
     if (!user.password_hash) {
-      console.warn('[Auth] User found but password_hash is missing — account not migrated to JWT auth:', email);
       return res.status(401).json({ error: 'This account was created before the system update. Please contact support or reset your password.' });
     }
-    
-    // Diagnostic: inspect password_hash state for this user
-    console.log('[Auth] Login user record — id:', user.id, '| password_hash present:', !!user.password_hash);
     
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
@@ -164,8 +151,7 @@ router.post('/login', async (req, res) => {
     });
     
     res.json({ user: { id: user.id, email: user.email } });
-  } catch (error) {
-    console.error('Login error:', error);
+  } catch {
     res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 });
@@ -179,7 +165,6 @@ router.post('/logout', (req, res) => {
 // GET /api/auth/me
 router.get('/me', authenticate, async (req, res) => {
   try {
-    console.log('[Auth] /me lookup — req.user.id:', req.user.id, '| req.user.email:', req.user.email);
     const { data: user, error: fetchError } = await supabaseService
       .from('profiles')
       .select('id, email')
@@ -187,14 +172,11 @@ router.get('/me', authenticate, async (req, res) => {
       .single();
 
     if (fetchError || !user) {
-      console.warn('[Auth] /me user not found — fetchError:', JSON.stringify(fetchError), '| userId:', req.user.id);
       return res.status(401).json({ error: 'User not found' });
     }
 
-    console.log('[Auth] /me user found:', user.id, user.email);
     res.json({ user });
-  } catch (error) {
-    console.error('[Auth] Auth me error:', error);
+  } catch {
     res.status(500).json({ error: 'Something went wrong.' });
   }
 });

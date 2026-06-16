@@ -10,6 +10,8 @@ import { parseAIResponse } from "./utils/aiParser";
 const API_BASE_URL = "/api";
 const SESSION_STORAGE_KEY = 'quizmaker_current_session_id';
 const SESSIONS_CACHE_KEY = 'quizmaker_sessions_cache';
+const MODEL_STORAGE_KEY = 'quizmaker_selected_model';
+const DEFAULT_MODEL = 'gemini-3.1-flash-lite';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -20,6 +22,7 @@ function App() {
     setBootStatus(status);
     bootStatusRef.current = status;
   }, []);
+
   const [messages, setMessages] = useState([]);
   const [history, setHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +32,7 @@ function App() {
       try {
         return JSON.parse(cached);
       } catch (e) {
-        console.error("[Debug] Failed to parse sessions cache:", e);
+        console.error("Failed to parse sessions cache:", e);
         return [];
       }
     }
@@ -43,7 +46,15 @@ function App() {
   const [quizParams, setQuizParams] = useState({ itemCount: 5, difficulty: 'Normal' });
   const [wrongAnswers, setWrongAnswers] = useState([]);
   const [saveStatus, setSaveStatus] = useState('synced');
-  const [selectedModel, setSelectedModel] = useState('gemini-3.1-flash-lite');
+  const [selectedModel, setSelectedModel] = useState(() => {
+    const saved = localStorage.getItem(MODEL_STORAGE_KEY);
+    return saved || DEFAULT_MODEL;
+  });
+
+  const handleSetSelectedModel = useCallback((model) => {
+    setSelectedModel(model);
+    localStorage.setItem(MODEL_STORAGE_KEY, model);
+  }, []);
 
   const updateCurrentSessionId = useCallback((id) => {
     setCurrentSessionId(id);
@@ -60,7 +71,7 @@ function App() {
         method: 'GET',
         credentials: 'include',
       });
-  
+
       if (!response.ok) {
         if (response.status === 401) {
           setSessions([]);
@@ -69,7 +80,7 @@ function App() {
         }
         throw new Error(`Failed to fetch sessions: ${response.status}`);
       }
-  
+
       const { sessions } = await response.json();
       const sortedData = (sessions || []).sort((a, b) => {
         if (a.pinned !== b.pinned) {
@@ -77,7 +88,7 @@ function App() {
         }
         return new Date(b.created_at) - new Date(a.created_at);
       });
-  
+
       setSessions(sortedData);
       localStorage.setItem(SESSIONS_CACHE_KEY, JSON.stringify(sortedData));
     } catch (error) {
@@ -107,10 +118,9 @@ function App() {
   const saveSessionToDb = useCallback(
     async (updatedHistory, topic, sessionId) => {
       if (!user) {
-        console.warn("[Debug] saveSessionToDb called without user");
         return;
       }
-  
+
       setSaveStatus('saving');
       try {
         const targetId = sessionId || currentSessionId;
@@ -144,6 +154,123 @@ function App() {
     [user, currentSessionId, fetchSessions, updateCurrentSessionId],
   );
 
+  const handleStartQuiz = useCallback(async (params = null, overrideSessionId = null, initialHistoryEntries = [], overrideTopic = null) => {
+    setIsLoading(true);
+  
+    let finalParams = { ...quizParams };
+    if (params) {
+      finalParams = params;
+      setQuizParams(params);
+    }
+  
+    // Construct dynamic prompt
+    const difficultyPrompts = {
+      Easy: "Generate questions strictly based on the notes provided. Focus on recall and basic understanding.",
+      Normal: "Generate a mix of direct note-based questions and situational application questions. Require the user to apply concepts to simple scenarios.",
+      Hard: "Generate primarily situational and complex scenarios. Questions should require critical thinking and synthesis of multiple concepts from the notes.",
+    };
+  
+    let prompt = `Now, start a mock quiz based on the notes provided above.
+  Number of items: ${finalParams.itemCount}.
+  Difficulty: ${finalParams.difficulty}.
+  ${difficultyPrompts[finalParams.difficulty]}`;
+  
+    if (params?.growthAreas && params.growthAreas.length > 0) {
+      const missed = params.growthAreas.map(a => `Q: ${a.question} (Correct: ${a.correctOption})`).join('\n');
+      prompt += `\n\nFocus specifically on these weak points from the previous attempt:\n${missed}`;
+    }
+  
+    setWrongAnswers([]); // Reset wrong answers for new quiz
+  
+    const controller = new AbortController();
+    setAbortController(controller);
+  
+    try {
+      const response = await fetch(`${API_BASE_URL}/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: 'include',
+        signal: controller.signal,
+        body: JSON.stringify({
+          message: prompt,
+          history: history,
+          model: selectedModel,
+        }),
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error || `Server responded with ${response.status}`,
+        );
+      }
+  
+      const data = await response.json();
+      const rawResponse = data.raw || "";
+      const { thought, final, structured } = parseAIResponse(rawResponse);
+      const displayText = structured.text || final;
+  
+      if (structured.type === "quiz") {
+        setQuizData(structured);
+        setView('quiz');
+        setQuizScore(0);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "model",
+            raw: rawResponse,
+            text: structured.text || displayText,
+            thought: thought,
+            ...structured,
+            ...data,
+          },
+        ]);
+      }
+  
+      setIsLoading(false);
+      setAbortController(null);
+  
+      const baseHistory = (initialHistoryEntries && initialHistoryEntries.length > 0) ? initialHistoryEntries : history;
+      const targetSessionId = overrideSessionId || currentSessionId;
+  
+      const updatedHistory = [
+        ...baseHistory,
+        {
+          role: "user",
+          parts: [
+            { text: prompt },
+          ],
+        },
+        { role: "model", parts: [{ text: rawResponse }] },
+      ];
+      setHistory(updatedHistory);
+  
+      const topic = overrideTopic || sessions.find((s) => s.id === targetSessionId)?.topic || "Quiz Session";
+      saveSessionToDb(updatedHistory, topic, targetSessionId).catch(() => {
+        setSaveStatus('error');
+      });
+    } catch (error) {
+      if (error.name === "AbortError") {
+        console.log("Request aborted by user");
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "model",
+            text: `Error: ${error.message}`,
+            type: "text",
+          },
+        ]);
+      }
+    } finally {
+      setIsLoading(false);
+      setAbortController(null);
+    }
+  }, [user, history, sessions, currentSessionId, saveSessionToDb, selectedModel]);
+  
   const handleSendMessage = useCallback(
     async (text) => {
       setView('chat');
@@ -159,6 +286,9 @@ function App() {
 
       const controller = new AbortController();
       setAbortController(controller);
+
+      const quizIntentRegex = /quiz|test|questions|\d+\s*items/i;
+      const userWantsQuiz = quizIntentRegex.test(text);
 
       try {
         if (!sessionId) {
@@ -178,6 +308,18 @@ function App() {
           } catch (error) {
             console.error("Error creating initial session:", error);
           }
+        }
+
+        if (userWantsQuiz) {
+          console.log('[Auto-Quiz] Detected quiz intent, starting quiz directly...');
+          const userHistoryEntry = { role: "user", parts: [{ text }] };
+          handleStartQuiz(
+            { itemCount: 5, difficulty: 'Normal' },
+            sessionId,
+            [userHistoryEntry],
+            text.length > 30 ? text.substring(0, 30) + "..." : text,
+          );
+          return;
         }
 
         const response = await fetch(`${API_BASE_URL}/chat`, {
@@ -209,6 +351,28 @@ function App() {
         const { title, thought, final, structured } = parseAIResponse(rawResponse);
         const displayText = structured.text || final;
 
+        if (structured.type === "quiz") {
+          const updatedHistory = [
+            ...history,
+            { role: "user", parts: [{ text }] },
+            { role: "model", parts: [{ text: rawResponse }] },
+          ];
+          setHistory(updatedHistory);
+
+          const topic =
+            !currentSessionId
+              ? title || (text.length > 30 ? text.substring(0, 30) + "..." : text)
+              : sessions.find((s) => s.id === currentSessionId)?.topic || "Chat";
+
+          saveSessionToDb(updatedHistory, topic, sessionId).catch(() => {
+            setSaveStatus('error');
+          });
+
+          setView('quiz');
+          handleStartQuiz({ itemCount: 5, difficulty: 'Normal' });
+          return;
+        }
+
         setMessages((prev) => [
           ...prev,
           {
@@ -230,17 +394,14 @@ function App() {
 
         const topic =
           !currentSessionId
-            ? (title || (text.length > 30 ? text.substring(0, 30) + "..." : text))
+            ? title || (text.length > 30 ? text.substring(0, 30) + "..." : text)
             : sessions.find((s) => s.id === currentSessionId)?.topic || "Chat";
-        
-        saveSessionToDb(updatedHistory, topic, sessionId).catch((e) => {
-          console.error("[Debug] Background save failed:", e);
+
+        saveSessionToDb(updatedHistory, topic, sessionId).catch(() => {
           setSaveStatus('error');
         });
       } catch (error) {
-        if (error.name === "AbortError") {
-          console.log("Request aborted by user");
-        } else {
+        if (error.name !== "AbortError") {
           console.error("Error sending message:", error);
           setMessages((prev) => [
             ...prev,
@@ -256,127 +417,8 @@ function App() {
         setAbortController(null);
       }
     },
-    [user, history, sessions, currentSessionId, saveSessionToDb, fetchSessions, updateCurrentSessionId, selectedModel],
+    [user, history, sessions, currentSessionId, saveSessionToDb, fetchSessions, updateCurrentSessionId, selectedModel, handleStartQuiz],
   );
-
-  const handleStartQuiz = useCallback(async (params = null) => {
-    setIsLoading(true);
-    
-    let finalParams = { ...quizParams };
-    if (params) {
-      finalParams = params;
-      setQuizParams(params);
-    }
-
-    // Construct dynamic prompt
-    const difficultyPrompts = {
-      Easy: "Generate questions strictly based on the notes provided. Focus on recall and basic understanding.",
-      Normal: "Generate a mix of direct note-based questions and situational application questions. Require the user to apply concepts to simple scenarios.",
-      Hard: "Generate primarily situational and complex scenarios. Questions should require critical thinking and synthesis of multiple concepts from the notes."
-    };
-
-    let prompt = `Now, start a mock quiz based on the notes provided above.
-    Number of items: ${finalParams.itemCount}.
-    Difficulty: ${finalParams.difficulty}.
-    ${difficultyPrompts[finalParams.difficulty]}`;
-
-    if (params?.growthAreas && params.growthAreas.length > 0) {
-      const missed = params.growthAreas.map(a => `Q: ${a.question} (Correct: ${a.correctOption})`).join('\n');
-      prompt += `\n\nFocus specifically on these weak points from the previous attempt:\n${missed}`;
-    }
-
-    setWrongAnswers([]); // Reset wrong answers for new quiz
-
-    const controller = new AbortController();
-    setAbortController(controller);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: 'include',
-        signal: controller.signal,
-        body: JSON.stringify({
-          message: prompt,
-          history: history,
-          model: selectedModel,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.error || `Server responded with ${response.status}`,
-        );
-      }
-
-      const data = await response.json();
-      const rawResponse = data.raw || "";
-
-      const { thought, final, structured } = parseAIResponse(rawResponse);
-      const displayText = structured.text || final;
-
-      if (structured.type === "quiz") {
-        setQuizData(structured);
-        setView('quiz');
-        setQuizScore(0);
-      } else {
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "model",
-            raw: rawResponse,
-            text: structured.text || displayText,
-            thought: thought,
-            ...structured,
-            ...data,
-          },
-        ]);
-      }
-
-      setIsLoading(false);
-      setAbortController(null);
-
-      const updatedHistory = [
-        ...history,
-        {
-          role: "user",
-          parts: [
-            { text: prompt },
-          ],
-        },
-        { role: "model", parts: [{ text: rawResponse }] },
-      ];
-      setHistory(updatedHistory);
-
-      const topic =
-        sessions.find((s) => s.id === currentSessionId)?.topic ||
-        "Quiz Session";
-      saveSessionToDb(updatedHistory, topic, currentSessionId).catch((e) => {
-        console.error("Background save failed:", e);
-        setSaveStatus('error');
-      });
-    } catch (error) {
-      if (error.name === "AbortError") {
-        console.log("Request aborted by user");
-      } else {
-        console.error("Error starting quiz:", error);
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "model",
-            text: `Error: ${error.message}`,
-            type: "text",
-          },
-        ]);
-      }
-    } finally {
-      setIsLoading(false);
-      setAbortController(null);
-    }
-  }, [user, history, sessions, currentSessionId, saveSessionToDb, selectedModel]);
 
   const stopGenerating = useCallback(() => {
     if (abortController) {
@@ -393,6 +435,14 @@ function App() {
     setView('chat');
   }, [updateCurrentSessionId]);
 
+  const handleResetToChat = useCallback(() => {
+    setView('chat');
+    setQuizData(null);
+    setQuizScore(0);
+    setQuizParams({ itemCount: 5, difficulty: 'Normal' });
+    setWrongAnswers([]);
+  }, []);
+
   const handleLoadSession = useCallback(async (sessionId) => {
     try {
       const response = await fetch(`${API_BASE_URL}/session/${sessionId}`, {
@@ -400,14 +450,14 @@ function App() {
         credentials: 'include',
       });
       if (!response.ok) throw new Error('Failed to load session');
-  
+
       const { session } = await response.json();
-  
+
       updateCurrentSessionId(sessionId);
       const historyData = session.history || [];
       setHistory(historyData);
       setView('chat');
-  
+
       const loadedMessages = historyData.map((item) => {
         if (item.role === "model") {
           const { thought, final, structured } = parseAIResponse(item.parts[0].text);
@@ -421,7 +471,7 @@ function App() {
         }
         return { role: "user", text: item.parts[0].text, type: "text" };
       });
-  
+
       setMessages(loadedMessages);
     } catch (error) {
       console.error("Error loading session:", error);
@@ -435,11 +485,11 @@ function App() {
         credentials: 'include',
       });
       if (!response.ok) throw new Error('Failed to delete session');
-  
+
       if (currentSessionId === sessionId) {
         handleNewChat();
       }
-  
+
       setSessions((prev) => {
         const filtered = prev.filter((s) => s.id !== sessionId);
         localStorage.setItem(SESSIONS_CACHE_KEY, JSON.stringify(filtered));
@@ -459,7 +509,7 @@ function App() {
         body: JSON.stringify({ topic: newTitle }),
       });
       if (!response.ok) throw new Error('Failed to rename session');
-  
+
       setSessions((prev) => {
         const updated = prev.map((s) => (s.id === sessionId ? { ...s, topic: newTitle } : s));
         localStorage.setItem(SESSIONS_CACHE_KEY, JSON.stringify(updated));
@@ -477,7 +527,7 @@ function App() {
         credentials: 'include',
       });
       if (!response.ok) throw new Error('Failed to toggle pin');
-  
+
       setSessions((prev) => {
         const updated = prev.map((s) => (s.id === sessionId ? { ...s, pinned: !currentPinStatus } : s));
         localStorage.setItem(SESSIONS_CACHE_KEY, JSON.stringify(updated));
@@ -490,7 +540,7 @@ function App() {
 
   const handleQuizAnswer = useCallback(async (option) => {
     setIsLoading(true);
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/chat`, {
         method: "POST",
@@ -524,7 +574,7 @@ function App() {
             },
           ]);
         }
-        
+
         if (structured.isFinished) {
           setView('summary');
         } else {
@@ -542,8 +592,7 @@ function App() {
 
       // Persist progress to DB
       const topic = sessions.find((s) => s.id === currentSessionId)?.topic || "Quiz Session";
-      saveSessionToDb(updatedHistory, topic, currentSessionId).catch((e) => {
-        console.error("Background save failed:", e);
+      saveSessionToDb(updatedHistory, topic, currentSessionId).catch(() => {
         setSaveStatus('error');
       });
 
@@ -582,7 +631,6 @@ function App() {
         }
 
         const data = await response.json();
-
         if (!isSubscribed) return;
 
         setUser(data.user);
@@ -657,7 +705,7 @@ function App() {
             saveSessionToDb(history, currentTopic, currentSessionId);
           }}
           selectedModel={selectedModel}
-          setSelectedModel={setSelectedModel}
+          setSelectedModel={handleSetSelectedModel}
         >
           {view === 'chat' && (
             <ChatInterface
@@ -686,7 +734,7 @@ function App() {
               summary={quizData?.summary}
               score={quizScore}
               total={quizData?.progress?.total}
-              onReset={handleNewChat}
+              onReset={handleResetToChat}
               onGrowthRetry={() => handleStartQuiz({ ...quizParams, growthAreas: wrongAnswers })}
               hasWrongAnswers={wrongAnswers.length > 0}
             />

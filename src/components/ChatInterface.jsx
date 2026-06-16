@@ -38,6 +38,7 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
             <h1 className="text-2xl font-serif italic text-[#7b9acc] max-w-md leading-relaxed">
               "Study to Understand, Navigate to Succeed."
             </h1>
+            <p className="text-sm text-black/60 italic mt-1">-Jul</p>
           </div>
         ) : (
           <>
