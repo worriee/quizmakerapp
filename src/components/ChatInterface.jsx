@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
 
 /** ChatInterface Component: primary chat UI with markdown and quiz rendering. */
 const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
@@ -35,48 +36,58 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-8">
-            <h1 className="text-2xl font-serif italic text-[#7b9acc] max-w-md leading-relaxed">
-              "Study to Understand, Navigate to Succeed."
-            </h1>
-            <p className="text-sm text-black/60 italic mt-1">-Jul</p>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-serif italic text-[#7b9acc] max-w-md leading-relaxed">
+                "Study to Understand, Navigate to Succeed."
+              </h1>
+            </div>
+            <p className="text-sm text-black/60 italic mt-4">-Jul</p>
           </div>
         ) : (
           <>
             {messages.map((msg, idx) => (
-          <div
-            key={idx}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-5 py-3 ${
-                msg.role === "user"
-                  ? "bg-[#7b9acc] text-white rounded-br-sm"
-                  : "bg-[#FCF6F5] text-black border border-[#7b9acc]/20 rounded-bl-sm"
-              }`}
-            >
-              {msg.type === "quiz" ? (
-                <div className="text-sm">{msg.text}</div>
-              ) : (
-                <div className="prose prose-sm max-w-none text-black leading-relaxed">
-                  <ReactMarkdown>{msg.text}</ReactMarkdown>
+              <div
+                key={idx}
+                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-5 py-3 ${
+                    msg.role === "user"
+                      ? "bg-[#7b9acc] text-white rounded-br-sm"
+                      : "bg-[#FCF6F5] text-black border border-[#7b9acc]/20 rounded-bl-sm"
+                  }`}
+                >
+                  {msg.type === "quiz" ? (
+                    <div className="text-sm">{msg.text}</div>
+                  ) : (
+                    <div className="prose prose-sm max-w-none text-black leading-relaxed">
+                      <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{msg.text}</ReactMarkdown>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
-            ))
-          }
-          {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-[#FCF6F5] text-black border border-[#7b9acc]/20 rounded-2xl rounded-bl-sm px-5 py-3">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-[#7b9acc] rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                <div className="w-2 h-2 bg-[#7b9acc] rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                <div className="w-2 h-2 bg-[#7b9acc] rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
               </div>
-            </div>
-          </div>
-          )}
-        </>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-[#FCF6F5] text-black border border-[#7b9acc]/20 rounded-2xl rounded-bl-sm px-5 py-3">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-2 h-2 bg-[#7b9acc] rounded-full animate-bounce"
+                      style={{ animationDelay: "0ms" }}
+                    />
+                    <div
+                      className="w-2 h-2 bg-[#7b9acc] rounded-full animate-bounce"
+                      style={{ animationDelay: "150ms" }}
+                    />
+                    <div
+                      className="w-2 h-2 bg-[#7b9acc] rounded-full animate-bounce"
+                      style={{ animationDelay: "300ms" }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
         <div ref={messagesEndRef} />
       </div>

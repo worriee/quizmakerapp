@@ -13,6 +13,8 @@ dist-ssr
 *.local
 .env
 .roo
+AGENTS.md
+opencode.json
 
 
 # Editor directories and files

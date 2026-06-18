@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 const MODELS = [
-{ id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash' },
+{ id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite' },
 { id: 'step-3.7-flash', name: 'Step 3.7 Flash' },
 { id: 'glm-5.1', name: 'GLM 5.1' },
 ];

@@ -1,51 +1,50 @@
-/* global process */
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 import { handleChat } from './ai.js';
-import { authRouter, supabaseService } from './auth.js';
+import { authRouter, supabaseService, authenticate } from './auth.js';
 
 const app = express();
 
-// Middleware
+const PRODUCTION_ORIGIN = process.env.CORS_ORIGIN || 'https://quizmakerapp.vercel.app';
+
 app.use(cors({
-  origin: true,
-  credentials: true
+  origin: process.env.NODE_ENV === 'production' ? PRODUCTION_ORIGIN : true,
+  credentials: true,
 }));
 app.use(express.json());
 app.use(cookieParser());
-app.use('/api/auth', authRouter);
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Too many requests. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const chatLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: 'Too many requests. Please slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api/auth', authLimiter, authRouter);
 
 // Session management routes (bypass RLS via supabaseService)
 const sessionRouter = express.Router();
 sessionRouter.use(cookieParser());
 
-// Reuse authenticate middleware inline to avoid circular deps
-const authenticateSession = async (req, res, next) => {
-  try {
-    const token = req.cookies?.token;
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
-    const jwt = (await import('jsonwebtoken')).default;
-    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
-    jwt.verify(token, JWT_SECRET);
-    next();
-  } catch {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-};
-
 // GET /api/sessions - list all sessions for current user
-sessionRouter.get('/', authenticateSession, async (req, res) => {
+sessionRouter.get('/', authenticate, async (req, res) => {
   try {
-    const token = req.cookies.token;
-    const jwt = (await import('jsonwebtoken')).default;
-    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
-    const decoded = jwt.verify(token, JWT_SECRET);
-
     const { data, error } = await supabaseService
       .from('chat_sessions')
       .select('*')
-      .eq('user_id', decoded.id)
+      .eq('user_id', req.user.id)
       .order('pinned', { ascending: false })
       .order('created_at', { ascending: false });
 
@@ -58,18 +57,13 @@ sessionRouter.get('/', authenticateSession, async (req, res) => {
 });
 
 // GET /api/session/:id - get a single session
-sessionRouter.get('/:id', authenticateSession, async (req, res) => {
+sessionRouter.get('/:id', authenticate, async (req, res) => {
   try {
-    const token = req.cookies.token;
-    const jwt = (await import('jsonwebtoken')).default;
-    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
-    const decoded = jwt.verify(token, JWT_SECRET);
-
     const { data, error } = await supabaseService
       .from('chat_sessions')
       .select('*')
       .eq('id', req.params.id)
-      .eq('user_id', decoded.id)
+      .eq('user_id', req.user.id)
       .single();
 
     if (error) throw error;
@@ -81,20 +75,19 @@ sessionRouter.get('/:id', authenticateSession, async (req, res) => {
 });
 
 // POST /api/session/create - create a new session
-sessionRouter.post('/create', authenticateSession, async (req, res) => {
+sessionRouter.post('/create', authenticate, async (req, res) => {
   try {
-    const token = req.cookies.token;
-    const jwt = (await import('jsonwebtoken')).default;
-    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
-    const decoded = jwt.verify(token, JWT_SECRET);
-
     const { topic, history } = req.body;
+
+    if (!topic && !history) {
+      return res.status(400).json({ error: 'Topic or history is required' });
+    }
 
     const { data, error } = await supabaseService
       .from('chat_sessions')
       .insert([
         {
-          user_id: decoded.id,
+          user_id: req.user.id,
           topic: topic || 'New Chat',
           history: history || [],
         },
@@ -110,20 +103,15 @@ sessionRouter.post('/create', authenticateSession, async (req, res) => {
 });
 
 // POST /api/session/:id/update - update session history/topic
-sessionRouter.post('/:id/update', authenticateSession, async (req, res) => {
+sessionRouter.post('/:id/update', authenticate, async (req, res) => {
   try {
-    const token = req.cookies.token;
-    const jwt = (await import('jsonwebtoken')).default;
-    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
-    const decoded = jwt.verify(token, JWT_SECRET);
-
     const { history, topic } = req.body;
 
     const { data, error } = await supabaseService
       .from('chat_sessions')
       .update({ history, topic })
       .eq('id', req.params.id)
-      .eq('user_id', decoded.id)
+      .eq('user_id', req.user.id)
       .select();
 
     if (error) throw error;
@@ -135,20 +123,19 @@ sessionRouter.post('/:id/update', authenticateSession, async (req, res) => {
 });
 
 // POST /api/session/:id/rename - rename a session
-sessionRouter.post('/:id/rename', authenticateSession, async (req, res) => {
+sessionRouter.post('/:id/rename', authenticate, async (req, res) => {
   try {
-    const token = req.cookies.token;
-    const jwt = (await import('jsonwebtoken')).default;
-    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
-    const decoded = jwt.verify(token, JWT_SECRET);
-
     const { topic } = req.body;
+
+    if (!topic || typeof topic !== 'string' || topic.trim().length === 0) {
+      return res.status(400).json({ error: 'Topic is required' });
+    }
 
     const { data, error } = await supabaseService
       .from('chat_sessions')
-      .update({ topic })
+      .update({ topic: topic.trim() })
       .eq('id', req.params.id)
-      .eq('user_id', decoded.id)
+      .eq('user_id', req.user.id)
       .select();
 
     if (error) throw error;
@@ -160,19 +147,13 @@ sessionRouter.post('/:id/rename', authenticateSession, async (req, res) => {
 });
 
 // POST /api/session/:id/pin - toggle pin
-sessionRouter.post('/:id/pin', authenticateSession, async (req, res) => {
+sessionRouter.post('/:id/pin', authenticate, async (req, res) => {
   try {
-    const token = req.cookies.token;
-    const jwt = (await import('jsonwebtoken')).default;
-    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
-    const decoded = jwt.verify(token, JWT_SECRET);
-
-    // Fetch current pin state first
     const { data: existing, error: fetchError } = await supabaseService
       .from('chat_sessions')
       .select('pinned')
       .eq('id', req.params.id)
-      .eq('user_id', decoded.id)
+      .eq('user_id', req.user.id)
       .single();
 
     if (fetchError) throw fetchError;
@@ -181,7 +162,7 @@ sessionRouter.post('/:id/pin', authenticateSession, async (req, res) => {
       .from('chat_sessions')
       .update({ pinned: !existing.pinned })
       .eq('id', req.params.id)
-      .eq('user_id', decoded.id)
+      .eq('user_id', req.user.id)
       .select();
 
     if (error) throw error;
@@ -193,18 +174,13 @@ sessionRouter.post('/:id/pin', authenticateSession, async (req, res) => {
 });
 
 // DELETE /api/session/:id - delete a session
-sessionRouter.delete('/:id', authenticateSession, async (req, res) => {
+sessionRouter.delete('/:id', authenticate, async (req, res) => {
   try {
-    const token = req.cookies.token;
-    const jwt = (await import('jsonwebtoken')).default;
-    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
-    const decoded = jwt.verify(token, JWT_SECRET);
-
     const { error } = await supabaseService
       .from('chat_sessions')
       .delete()
       .eq('id', req.params.id)
-      .eq('user_id', decoded.id);
+      .eq('user_id', req.user.id);
 
     if (error) throw error;
     res.json({ ok: true });
@@ -217,37 +193,19 @@ sessionRouter.delete('/:id', authenticateSession, async (req, res) => {
 app.use('/api/session', sessionRouter);
 app.use('/api/sessions', sessionRouter);
 
-// Health check (no auth required)
-
 /**
  * POST /api/chat
  * Protected route - requires valid JWT cookie
  */
-app.post('/api/chat', async (req, res) => {
+app.post('/api/chat', chatLimiter, authenticate, async (req, res) => {
   try {
-    // JWT Authentication check (reuse middleware logic inline to avoid circular deps)
-    const token = req.cookies?.token;
-    if (!token) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    // We need jwt here for verification
-    const jwt = (await import('jsonwebtoken')).default;
-    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
-
-    try {
-      jwt.verify(token, JWT_SECRET);
-    } catch {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-
     const { message, history, model } = req.body;
 
-    if (!message) {
-      return res.status(400).json({ error: 'Message is required' });
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+      return res.status(400).json({ error: 'Message is required and must be a non-empty string' });
     }
 
-    const rawAIResponse = await handleChat(message, history || [], model);
+    const rawAIResponse = await handleChat(message.trim(), history || [], model);
     res.json({ raw: rawAIResponse });
   } catch (error) {
     console.error('[Server] Internal Server Error:', error);
@@ -256,5 +214,4 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-// Export for Vercel/Serverless environment
 export default app;

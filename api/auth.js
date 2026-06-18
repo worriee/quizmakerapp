@@ -8,13 +8,18 @@ import { createClient } from '@supabase/supabase-js';
 const router = express.Router();
 router.use(cookieParser());
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
+}
 const JWT_EXPIRY = '7d';
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Server-side Supabase client using service_role key to bypass RLS
 const supabaseService = createClient(
   process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
   {
     auth: {
       autoRefreshToken: false,
@@ -22,6 +27,10 @@ const supabaseService = createClient(
     },
   }
 );
+
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is required');
+}
 
 const authenticate = (req, res, next) => {
   try {
@@ -44,6 +53,10 @@ router.post('/signup', async (req, res) => {
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    if (!EMAIL_REGEX.test(email)) {
+      return res.status(400).json({ error: 'Please provide a valid email address' });
     }
 
     if (password.length < 6) {
@@ -112,6 +125,10 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
+    if (!EMAIL_REGEX.test(email)) {
+      return res.status(400).json({ error: 'Please provide a valid email address' });
+    }
+
     // Find user
     const { data: user, error: fetchError } = await supabaseService
       .from('profiles')
@@ -158,7 +175,12 @@ router.post('/login', async (req, res) => {
 
 // POST /api/auth/logout
 router.post('/logout', (req, res) => {
-  res.clearCookie('token');
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    path: '/',
+  });
   res.json({ ok: true });
 });
 
@@ -181,4 +203,4 @@ router.get('/me', authenticate, async (req, res) => {
   }
 });
 
-export { router as authRouter, supabaseService };
+export { router as authRouter, supabaseService, authenticate };

@@ -1,13 +1,9 @@
 /* global process */
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import "dotenv/config";
-
-// Initialize the Google Generative AI client
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
 const MODEL_CONFIGS = {
   'gemini-3.1-flash-lite': {
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
     apiKeyEnv: 'GOOGLE_API_KEY',
     modelId: 'gemini-3.1-flash-lite',
   },
