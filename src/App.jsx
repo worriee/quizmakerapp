@@ -722,13 +722,14 @@ function App() {
               onExit={() => setView('chat')}
             />
           )}
-          {view === 'quiz' && (
-            <QuizInterface
-              quizData={quizData}
-              onAnswer={handleQuizAnswer}
-              onExit={() => setView('chat')}
-            />
-          )}
+           {view === 'quiz' && (
+             <QuizInterface
+               key={quizData?.progress?.current || 1}
+               quizData={quizData}
+               onAnswer={handleQuizAnswer}
+               onExit={() => setView('chat')}
+             />
+           )}
           {view === 'summary' && (
             <QuizSummary
               summary={quizData?.summary}
