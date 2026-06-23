@@ -1,7 +1,6 @@
 [
   {
     "version": "1.0.1",
-    "date": "June 23, 2026",
     "notes": [
       "Interactive quizzes with difficulty levels (Easy, Normal, Hard) and growth area tracking",
       "Multi-model AI support: Gemini 3.1 Flash, Step 3.7 Flash, GLM 5.1",

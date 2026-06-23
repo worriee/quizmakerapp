@@ -289,31 +289,34 @@ const MainLayout = ({
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col relative overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#7b9acc]/20 bg-[#FCF6F5] relative">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-2 p-3 sm:p-4 border-b border-[#7b9acc]/20 bg-[#FCF6F5]">
+          {/* Left group: hamburger, TUON AI, version */}
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-3 sm:p-2 hover:bg-[#7b9acc]/10 rounded-lg transition-all"
+              className="p-2 hover:bg-[#7b9acc]/10 rounded-lg transition-all shrink-0"
+              aria-label="Toggle sidebar"
             >
-              <span className="text-xl">☰</span>
+              <span className="text-lg sm:text-xl leading-none">☰</span>
             </button>
-            <span className="font-bold text-lg tracking-tight text-black">
+            <span className="font-bold text-base sm:text-lg tracking-tight text-black whitespace-nowrap">
               TUON AI
             </span>
             <button
               onClick={handleOpenChangelog}
-              className="relative text-xs font-medium text-[#7b9acc] border border-[#7b9acc]/40 bg-[#7b9acc]/10 rounded-full px-2.5 py-0.5 hover:bg-[#7b9acc]/20 transition-all cursor-pointer"
+              className="relative text-[10px] sm:text-xs font-medium text-[#7b9acc] border border-[#7b9acc]/40 bg-[#7b9acc]/10 rounded-full px-2 py-0.5 hover:bg-[#7b9acc]/20 transition-all cursor-pointer shrink-0"
             >
               v{VERSION}
               {hasNewVersion && (
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#7b9acc] border-2 border-[#FCF6F5] rounded-full" />
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#7b9acc] border-2 border-[#FCF6F5] rounded-full" />
               )}
             </button>
           </div>
 
-          <div className="absolute left-1/2 -translate-x-1/2">
+          {/* Model selector - wraps to own row on mobile, centered on desktop */}
+          <div className="order-last sm:order-none w-full sm:w-auto sm:flex-1 sm:flex sm:justify-center mt-1 sm:mt-0">
             <ModelSelector
               selectedModel={selectedModel}
               setSelectedModel={setSelectedModel}
@@ -323,10 +326,11 @@ const MainLayout = ({
             />
           </div>
 
-          <div className="flex items-center gap-4">
+          {/* Right group: save status, profile */}
+          <div className="flex items-center gap-2 sm:gap-3 ml-auto">
             {saveStatus !== "synced" && (
               <div
-                className={`flex items-center gap-2 px-2 py-1 rounded-full text-[10px] font-medium transition-all ${
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium transition-all ${
                   saveStatus === "saving"
                     ? "bg-[#FCF6F5] text-[#7b9acc] border border-[#7b9acc]/30"
                     : "bg-[#FCF6F5] text-[#7b9acc] border border-[#7b9acc]/30"
@@ -339,87 +343,71 @@ const MainLayout = ({
                       : "bg-[#7b9acc]"
                   }`}
                 />
-                {saveStatus === "saving" ? (
-                  <span>Saving...</span>
-                ) : (
-                  <button
-                    onClick={onRetrySave}
-                    className="hover:underline font-bold"
-                  >
-                    Sync Error! Retry
+                <span className="hidden sm:inline">
+                  {saveStatus === "saving" ? "Saving..." : "Sync Error"}
+                </span>
+                {saveStatus === "error" && (
+                  <button onClick={onRetrySave} className="sm:ml-0.5 hover:underline font-bold">
+                    Retry
                   </button>
                 )}
               </div>
             )}
 
-            <button
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                setIsProfileOpen(!isProfileOpen);
-              }}
-              className="flex items-center gap-2 p-1 rounded-full hover:bg-[#7b9acc]/10 transition-all cursor-pointer"
-            >
-              <div className="w-8 h-8 bg-[#7b9acc] rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
-                {user?.email?.charAt(0).toUpperCase() || "U"}
-              </div>
-            </button>
-
-            {isProfileOpen && (
-              <div
-                ref={profileRef}
-                className="absolute right-4 top-16 w-64 bg-[#FCF6F5] border border-[#7b9acc]/20 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2"
+            <div className="relative">
+              <button
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  setIsProfileOpen(!isProfileOpen);
+                }}
+                className="p-1 rounded-full hover:bg-[#7b9acc]/10 transition-all cursor-pointer"
+                aria-label="Profile"
               >
-                <div className="p-5">
-                  <div className="flex justify-between items-center mb-5">
-                    <h3 className="text-[10px] font-black text-black/50 uppercase tracking-widest">
-                      User Profile
-                    </h3>
-                    <button
-                      onClick={() => setIsProfileOpen(false)}
-                      className="p-1 hover:bg-[#7b9acc]/10 rounded-full transition-colors text-black hover:text-[#7b9acc]"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth={2}
-                        stroke="currentColor"
-                        className="w-4 h-4"
+                <div className="w-7 h-7 sm:w-8 sm:h-8 bg-[#7b9acc] rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
+                  {user?.email?.charAt(0).toUpperCase() || "U"}
+                </div>
+              </button>
+
+              {isProfileOpen && (
+                <div
+                  ref={profileRef}
+                  className="absolute right-0 top-full mt-2 w-64 bg-[#FCF6F5] border border-[#7b9acc]/20 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2"
+                >
+                  <div className="p-5">
+                    <div className="flex justify-between items-center mb-5">
+                      <h3 className="text-[10px] font-black text-black/50 uppercase tracking-widest">
+                        User Profile
+                      </h3>
+                      <button
+                        onClick={() => setIsProfileOpen(false)}
+                        className="p-1 hover:bg-[#7b9acc]/10 rounded-full transition-colors text-black hover:text-[#7b9acc]"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="text-sm">
-                      <p className="text-black/60 text-[10px] uppercase font-bold tracking-wider mb-1">
-                        Email Address
-                      </p>
-                      <p className="text-black font-semibold truncate">
-                        {user?.email || "Not available"}
-                      </p>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
                     </div>
-
-                    <button
-                      onClick={onLogout}
-                      className="w-full mt-6 flex items-center justify-center gap-2 px-3 py-2.5 bg-[#FCF6F5] text-black rounded-xl hover:bg-[#7b9acc]/10 transition-all text-sm font-bold border border-[#7b9acc]/30"
-                    >
-                      <img
-                        src={logoutIcon}
-                        alt="Logout"
-                        className="w-4 h-4 opacity-70"
-                      />
-                      Logout
-                    </button>
+                    <div className="space-y-3">
+                      <div className="text-sm">
+                        <p className="text-black/60 text-[10px] uppercase font-bold tracking-wider mb-1">
+                          Email Address
+                        </p>
+                        <p className="text-black font-semibold truncate">
+                          {user?.email || "Not available"}
+                        </p>
+                      </div>
+                      <button
+                        onClick={onLogout}
+                        className="w-full mt-6 flex items-center justify-center gap-2 px-3 py-2.5 bg-[#FCF6F5] text-black rounded-xl hover:bg-[#7b9acc]/10 transition-all text-sm font-bold border border-[#7b9acc]/30"
+                      >
+                        <img src={logoutIcon} alt="Logout" className="w-4 h-4 opacity-70" />
+                        Logout
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 

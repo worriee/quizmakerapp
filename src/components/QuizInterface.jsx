@@ -29,9 +29,9 @@ const QuizInterface = ({ quizData, onAnswer, onExit }) => {
   }
 
   return (
-    <div className="flex flex-col h-full max-w-3xl mx-auto w-full p-4 sm:p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="flex flex-col h-full max-w-3xl mx-auto w-full p-3 sm:p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[#7b9acc]/20 pb-4 mb-8">
+      <div className="flex items-center justify-between border-b border-[#7b9acc]/20 pb-3 sm:pb-4 mb-4 sm:mb-8">
         <button
           onClick={onExit}
           className="text-sm text-black/60 hover:text-black transition-colors flex items-center gap-1"
@@ -53,21 +53,21 @@ const QuizInterface = ({ quizData, onAnswer, onExit }) => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-8 pr-2">
+      <div className="flex-1 overflow-y-auto space-y-5 sm:space-y-8 pr-1 sm:pr-2">
         {/* Feedback Card - Moved to Top */}
         {feedback && feedback.isCorrect !== null && (
           <div
-            className={`p-6 rounded-2xl border-2 animate-in slide-in-from-top-4 duration-500 shadow-sm ${
+            className={`p-4 sm:p-6 rounded-2xl border-2 animate-in slide-in-from-top-4 duration-500 shadow-sm ${
               feedback.isCorrect
                 ? "bg-[#7b9acc] border-[#7b9acc] text-[#FCF6F5]"
                 : "bg-[#FCF6F5] border-[#7b9acc] text-black"
             }`}
           >
-            <div className="flex items-center gap-3 mb-3">
-              <span className="text-2xl">
+            <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+              <span className="text-xl sm:text-2xl">
                 {feedback.isCorrect ? "✅" : "❌"}
               </span>
-              <span className="text-lg font-bold leading-none">
+              <span className="text-base sm:text-lg font-bold leading-none">
                 {feedback.isCorrect ? "Correct!" : "Not quite"}
               </span>
             </div>
@@ -78,21 +78,21 @@ const QuizInterface = ({ quizData, onAnswer, onExit }) => {
         )}
 
         {/* Question Section */}
-        <div className="space-y-8">
-          <div className="space-y-3">
-            <div className="inline-block px-3 py-1 rounded-full bg-[#7b9acc]/10 text-[#7b9acc] text-[10px] font-bold uppercase tracking-widest">
+        <div className="space-y-5 sm:space-y-8">
+          <div className="space-y-2 sm:space-y-3">
+            <div className="inline-block px-2.5 sm:px-3 py-1 rounded-full bg-[#7b9acc]/10 text-[#7b9acc] text-[10px] font-bold uppercase tracking-widest">
               Current Question
             </div>
-            <h2 className="text-xl sm:text-3xl font-bold text-black leading-tight tracking-tight">
+            <h2 className="text-lg sm:text-3xl font-bold text-black leading-tight tracking-tight">
               {text}
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-3 sm:gap-4">
             {options.map((option, idx) => {
               let buttonClass =
-                "text-left px-6 py-5 rounded-2xl border-2 transition-all text-sm sm:text-base font-medium ";
-
+                "text-left px-4 sm:px-6 py-3 sm:py-5 rounded-2xl border-2 transition-all text-sm sm:text-base font-medium ";
+              
               if (selectedOption === null) {
                 buttonClass +=
                   "border-[#7b9acc]/20 bg-white hover:bg-[#7b9acc]/5 hover:border-[#7b9acc]/50 text-black";

@@ -7,10 +7,10 @@ const QuizSetup = ({ onStart, onExit }) => {
   const difficulties = ["Easy", "Normal", "Hard"];
 
   return (
-    <div className="flex flex-col items-center justify-center h-full p-6 animate-in fade-in zoom-in duration-300">
-      <div className="bg-white border border-[#7b9acc]/20 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-xl space-y-8">
+    <div className="flex flex-col items-center justify-center h-full p-3 sm:p-6 animate-in fade-in zoom-in duration-300">
+      <div className="bg-white border border-[#7b9acc]/20 rounded-3xl p-5 sm:p-8 max-w-md w-full shadow-xl space-y-6 sm:space-y-8">
         <div className="text-center space-y-2">
-          <h2 className="text-3xl font-sans text-[#7b9acc]">
+          <h2 className="text-2xl sm:text-3xl font-sans text-[#7b9acc]">
             Quiz Configuration
           </h2>
           <p className="text-black/50 text-sm">

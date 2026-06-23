@@ -33,11 +33,11 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
   return (
     <div className="flex flex-col h-full">
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-5 sm:space-y-6">
         {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center p-8">
+          <div className="h-full flex flex-col items-center justify-center text-center p-6 sm:p-8">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-serif italic text-[#7b9acc] max-w-md leading-relaxed">
+              <h1 className="text-lg sm:text-2xl font-serif italic text-[#7b9acc] max-w-md leading-relaxed">
                 "Study to Understand, Navigate to Succeed."
               </h1>
             </div>
@@ -94,8 +94,8 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-[#7b9acc]/20 p-4 bg-[#FCF6F5]">
-        <form onSubmit={handleSubmit} className="flex gap-3">
+      <div className="border-t border-[#7b9acc]/20 p-3 sm:p-4 bg-[#FCF6F5]">
+        <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-3">
           <textarea
             ref={textareaRef}
             value={input}
@@ -103,27 +103,27 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
             onKeyDown={handleKeyDown}
             placeholder="Ask TUON AI anything..."
             rows={1}
-            className="flex-1 resize-none rounded-xl border border-[#7b9acc]/30 bg-white px-4 py-3 text-sm text-black placeholder:text-black/40 focus:outline-none focus:ring-2 focus:ring-[#7b9acc]"
+            className="flex-1 resize-none rounded-xl border border-[#7b9acc]/30 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-black placeholder:text-black/40 focus:outline-none focus:ring-2 focus:ring-[#7b9acc]"
           />
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={onStartQuiz}
               disabled={isLoading}
-              className="px-4 py-2 rounded-xl bg-[#FCF6F5] text-black border border-[#7b9acc]/30 text-sm font-medium hover:bg-[#7b9acc]/10 disabled:opacity-50"
+              className="px-3 sm:px-4 py-2 rounded-xl bg-[#FCF6F5] text-black border border-[#7b9acc]/30 text-xs sm:text-sm font-medium hover:bg-[#7b9acc]/10 disabled:opacity-50"
             >
               Quiz
             </button>
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="px-4 py-2 rounded-xl bg-[#7b9acc] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+              className="px-3 sm:px-4 py-2 rounded-xl bg-[#7b9acc] text-white text-xs sm:text-sm font-semibold hover:opacity-90 disabled:opacity-50"
             >
               Send
             </button>
           </div>
         </form>
-        <p className="text-center text-[10px] text-black/40 mt-3 italic">
+        <p className="text-center text-[10px] text-black/40 mt-2 sm:mt-3 italic">
           AI still make mistakes always double check
         </p>
       </div>
