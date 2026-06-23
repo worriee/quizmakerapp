@@ -11,6 +11,7 @@ const API_BASE_URL = "/api";
 const SESSION_STORAGE_KEY = 'quizmaker_current_session_id';
 const SESSIONS_CACHE_KEY = 'quizmaker_sessions_cache';
 const MODEL_STORAGE_KEY = 'quizmaker_selected_model';
+const CUSTOM_MODELS_KEY = 'quizmaker_custom_models';
 const DEFAULT_MODEL = 'gemini-3.1-flash-lite';
 
 function App() {
@@ -50,11 +51,36 @@ function App() {
     const saved = localStorage.getItem(MODEL_STORAGE_KEY);
     return saved || DEFAULT_MODEL;
   });
+  const [customModels, setCustomModels] = useState(() => {
+    const saved = localStorage.getItem(CUSTOM_MODELS_KEY);
+    return saved ? JSON.parse(saved) : [];
+  });
 
   const handleSetSelectedModel = useCallback((model) => {
     setSelectedModel(model);
     localStorage.setItem(MODEL_STORAGE_KEY, model);
   }, []);
+
+  const handleSaveCustomModel = useCallback((modelConfig) => {
+    setCustomModels((prev) => {
+      const updated = prev.filter((m) => m.id !== modelConfig.id).concat(modelConfig);
+      localStorage.setItem(CUSTOM_MODELS_KEY, JSON.stringify(updated));
+      return updated;
+    });
+    localStorage.setItem(MODEL_STORAGE_KEY, modelConfig.id);
+  }, []);
+
+  const handleDeleteCustomModel = useCallback((modelId) => {
+    setCustomModels((prev) => {
+      const updated = prev.filter((m) => m.id !== modelId);
+      localStorage.setItem(CUSTOM_MODELS_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const getCustomModelConfig = useCallback((modelId) => {
+    return customModels.find((m) => m.id === modelId) || null;
+  }, [customModels]);
 
   const updateCurrentSessionId = useCallback((id) => {
     setCurrentSessionId(id);
@@ -197,6 +223,7 @@ function App() {
           message: prompt,
           history: history,
           model: selectedModel,
+          customModelConfig: getCustomModelConfig(selectedModel),
         }),
       });
   
@@ -269,7 +296,7 @@ function App() {
       setIsLoading(false);
       setAbortController(null);
     }
-  }, [user, history, sessions, currentSessionId, saveSessionToDb, selectedModel]);
+  }, [user, history, sessions, currentSessionId, saveSessionToDb, selectedModel, getCustomModelConfig]);
   
   const handleSendMessage = useCallback(
     async (text) => {
@@ -333,6 +360,7 @@ function App() {
             message: text,
             history: history,
             model: selectedModel,
+            customModelConfig: getCustomModelConfig(selectedModel),
           }),
         });
 
@@ -417,7 +445,7 @@ function App() {
         setAbortController(null);
       }
     },
-    [user, history, sessions, currentSessionId, saveSessionToDb, fetchSessions, updateCurrentSessionId, selectedModel, handleStartQuiz],
+    [user, history, sessions, currentSessionId, saveSessionToDb, fetchSessions, updateCurrentSessionId, selectedModel, handleStartQuiz, getCustomModelConfig],
   );
 
   const stopGenerating = useCallback(() => {
@@ -552,6 +580,7 @@ function App() {
           message: option,
           history: history,
           model: selectedModel,
+          customModelConfig: getCustomModelConfig(selectedModel),
         }),
       });
 
@@ -601,7 +630,7 @@ function App() {
     } finally {
       setIsLoading(false);
     }
-  }, [user, history, sessions, currentSessionId, saveSessionToDb, selectedModel]);
+  }, [user, history, sessions, currentSessionId, saveSessionToDb, selectedModel, getCustomModelConfig]);
 
   useEffect(() => {
     let isSubscribed = true;
@@ -706,6 +735,9 @@ function App() {
           }}
           selectedModel={selectedModel}
           setSelectedModel={handleSetSelectedModel}
+          customModels={customModels}
+          onSaveCustomModel={handleSaveCustomModel}
+          onDeleteCustomModel={handleDeleteCustomModel}
         >
           {view === 'chat' && (
             <ChatInterface

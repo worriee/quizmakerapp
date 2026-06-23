@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.tuonai.worrie",
+        "sha256_cert_fingerprints": ["5A:C1:FD:5D:C9:80:6B:70:29:AE:29:80:44:25:1B:BC:CA:EC:64:EB:7E:A8:E5:3E:01:DE:06:43:DB:BF:49:33"]
+      }
+    }]

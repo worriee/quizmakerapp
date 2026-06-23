@@ -78,9 +78,14 @@ const timeoutPromise = (ms) =>
  * @returns {Promise<string>} - The raw text response.
  */
 async function callOpenAICompatibleAPI(config, message, history) {
-  const apiKey = process.env[config.apiKeyEnv];
-  if (!apiKey) {
-    throw new Error(`API key not found ${config.apiKeyEnv}`);
+  // Resolve API key: inline key takes precedence, then env variable, then empty
+  let apiKey;
+  if (config.apiKey !== undefined) {
+    apiKey = config.apiKey;
+  } else if (config.apiKeyEnv) {
+    apiKey = process.env[config.apiKeyEnv];
+  } else {
+    apiKey = '';
   }
 
   // Convert SDK history format [{role, parts: [{text}]}] to OpenAI format [{role, content}]
@@ -93,12 +98,16 @@ async function callOpenAICompatibleAPI(config, message, history) {
     { role: "user", content: message },
   ];
 
+  const headers = {
+    "Content-Type": "application/json",
+  };
+  if (apiKey) {
+    headers["Authorization"] = `Bearer ${apiKey}`;
+  }
+
   const response = await fetch(`${config.baseUrl}/chat/completions`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
+    headers,
     body: JSON.stringify({
       model: config.modelId,
       messages: messages,
@@ -120,9 +129,40 @@ async function callOpenAICompatibleAPI(config, message, history) {
  * @param {string} message - User input.
  * @param {Array} history - Chat history.
  * @param {string} [modelId] - Optional model identifier.
+ * @param {Object} [customModelConfig] - Optional custom model config (for local/user-provided LLMs).
  * @returns {Promise<string>} - The raw text response from the AI.
  */
-export async function handleChat(message, history, modelId) {
+export async function handleChat(message, history, modelId, customModelConfig = null) {
+  // If a custom model config is provided, use it directly (bypass MODEL_CONFIGS)
+  if (customModelConfig) {
+    const config = {
+      baseUrl: customModelConfig.baseUrl.replace(/\/+$/, ''), // strip trailing slash
+      modelId: customModelConfig.modelId,
+      apiKey: customModelConfig.apiKey || '',
+    };
+
+    try {
+      const responseText = await Promise.race([
+        callOpenAICompatibleAPI(config, message, history),
+        timeoutPromise(30000),
+      ]);
+
+      if (!responseText || responseText.trim().length === 0) {
+        return "<thought>The AI returned an empty response.</thought><final>I'm sorry, I encountered an issue generating a response.</final>";
+      }
+
+      return responseText;
+    } catch (error) {
+      console.error(`[AI] Custom Model Error:`, error);
+      if (error.message === "AI_TIMEOUT") {
+        const timeoutError = new Error("The AI is taking too long to respond. Please try again.");
+        timeoutError.cause = error;
+        throw timeoutError;
+      }
+      throw error;
+    }
+  }
+
   // Default to gemini-3.1-flash-lite if no modelId is provided
   const effectiveModelId = modelId || 'gemini-3.1-flash-lite';
   

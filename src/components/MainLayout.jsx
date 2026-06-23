@@ -21,6 +21,9 @@ const MainLayout = ({
   onRetrySave,
   selectedModel,
   setSelectedModel,
+  customModels = [],
+  onSaveCustomModel,
+  onDeleteCustomModel,
 }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(
     typeof window !== "undefined" ? window.innerWidth >= 1024 : true,
@@ -29,8 +32,40 @@ const MainLayout = ({
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState("");
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [changelog, setChangelog] = useState(null);
+  const [isChangelogOpen, setIsChangelogOpen] = useState(false);
+  const [changelogLoading, setChangelogLoading] = useState(false);
   const menuRef = useRef(null);
   const profileRef = useRef(null);
+
+  const VERSION = "1.0.1";
+
+  const hasNewVersion =
+    typeof window !== "undefined" &&
+    localStorage.getItem("quizmaker_dismissed_version") !== VERSION;
+
+  const handleOpenChangelog = async () => {
+    if (changelog) {
+      setIsChangelogOpen(true);
+      return;
+    }
+    setChangelogLoading(true);
+    try {
+      const res = await fetch("/changelog.json");
+      const data = await res.json();
+      setChangelog(data);
+      setIsChangelogOpen(true);
+    } catch {
+      setChangelog(null);
+    } finally {
+      setChangelogLoading(false);
+    }
+  };
+
+  const handleCloseChangelog = () => {
+    setIsChangelogOpen(false);
+    localStorage.setItem("quizmaker_dismissed_version", VERSION);
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -267,15 +302,24 @@ const MainLayout = ({
             <span className="font-bold text-lg tracking-tight text-black">
               TUON AI
             </span>
-            <span className="text-xs font-medium text-[#7b9acc] border border-[#7b9acc]/40 bg-[#7b9acc]/10 rounded-full px-2.5 py-0.5">
-              v1.0.0
-            </span>
+            <button
+              onClick={handleOpenChangelog}
+              className="relative text-xs font-medium text-[#7b9acc] border border-[#7b9acc]/40 bg-[#7b9acc]/10 rounded-full px-2.5 py-0.5 hover:bg-[#7b9acc]/20 transition-all cursor-pointer"
+            >
+              v{VERSION}
+              {hasNewVersion && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#7b9acc] border-2 border-[#FCF6F5] rounded-full" />
+              )}
+            </button>
           </div>
 
           <div className="absolute left-1/2 -translate-x-1/2">
             <ModelSelector
               selectedModel={selectedModel}
               setSelectedModel={setSelectedModel}
+              customModels={customModels}
+              onSaveCustomModel={onSaveCustomModel}
+              onDeleteCustomModel={onDeleteCustomModel}
             />
           </div>
 
@@ -380,6 +424,81 @@ const MainLayout = ({
         </div>
 
         <div className="flex-1 overflow-hidden">{children}</div>
+
+        {isChangelogOpen && changelog && (
+          <div
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={handleCloseChangelog}
+          >
+            <div
+              className="bg-[#FCF6F5] border border-[#7b9acc]/20 rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="sticky top-0 bg-[#FCF6F5] border-b border-[#7b9acc]/10 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+                <div>
+                  <h2 className="font-bold text-lg text-black">What's New</h2>
+                  <p className="text-xs text-black/50">TUON AI Release Notes</p>
+                </div>
+                <button
+                  onClick={handleCloseChangelog}
+                  className="p-1.5 hover:bg-[#7b9acc]/10 rounded-full transition-all text-black/60 hover:text-black"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="w-5 h-5"
+                  >
+                    <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="px-6 py-4 space-y-6">
+                {changelog.map((release) => (
+                  <div key={release.version}>
+                    <div className="flex items-baseline gap-3 mb-3">
+                      <span className="text-sm font-bold text-[#7b9acc] border border-[#7b9acc]/30 bg-[#7b9acc]/10 rounded-full px-2.5 py-0.5">
+                        v{release.version}
+                      </span>
+                      <span className="text-xs text-black/40">
+                        {release.date}
+                      </span>
+                    </div>
+                    <ul className="space-y-2">
+                      {release.notes.map((note, i) => (
+                        <li
+                          key={i}
+                          className="flex items-start gap-2 text-sm text-black/80"
+                        >
+                          <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#7b9acc]/40 shrink-0" />
+                          {note}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t border-[#7b9acc]/10 px-6 py-3">
+                <p className="text-[10px] text-black/40 text-center">
+                  Thank you for using TUON AI. -Jul
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {changelogLoading && (
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="bg-[#FCF6F5] rounded-2xl shadow-2xl px-8 py-6 flex items-center gap-3">
+              <div className="w-4 h-4 border-2 border-[#7b9acc] border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm text-black/70">
+                Loading changelog...
+              </span>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

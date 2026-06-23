@@ -199,13 +199,13 @@ app.use('/api/sessions', sessionRouter);
  */
 app.post('/api/chat', chatLimiter, authenticate, async (req, res) => {
   try {
-    const { message, history, model } = req.body;
+    const { message, history, model, customModelConfig } = req.body;
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return res.status(400).json({ error: 'Message is required and must be a non-empty string' });
     }
 
-    const rawAIResponse = await handleChat(message.trim(), history || [], model);
+    const rawAIResponse = await handleChat(message.trim(), history || [], model, customModelConfig);
     res.json({ raw: rawAIResponse });
   } catch (error) {
     console.error('[Server] Internal Server Error:', error);

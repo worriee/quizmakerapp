@@ -41,7 +41,6 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
                 "Study to Understand, Navigate to Succeed."
               </h1>
             </div>
-            <p className="text-sm text-black/60 italic mt-4">-Jul</p>
           </div>
         ) : (
           <>
@@ -61,7 +60,9 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
                     <div className="text-sm">{msg.text}</div>
                   ) : (
                     <div className="prose prose-sm max-w-none text-black leading-relaxed">
-                      <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{msg.text}</ReactMarkdown>
+                      <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+                        {msg.text}
+                      </ReactMarkdown>
                     </div>
                   )}
                 </div>
