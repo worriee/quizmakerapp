@@ -12,7 +12,7 @@ dist
 dist-ssr
 *.local
 .env
-.clinerules
+.opencode
 AGENTS.md
 opencode.json
 

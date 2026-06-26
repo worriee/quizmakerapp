@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import CustomLLMModal from './CustomLLMModal';
 
 const MODELS = [
 { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite' },
@@ -8,18 +9,13 @@ const MODELS = [
 
 const ModelSelector = ({ selectedModel, setSelectedModel, customModels = [], onSaveCustomModel, onDeleteCustomModel }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [formName, setFormName] = useState('');
-  const [formBaseUrl, setFormBaseUrl] = useState('');
-  const [formModelId, setFormModelId] = useState('');
-  const [formApiKey, setFormApiKey] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
-        setShowForm(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -30,22 +26,13 @@ const ModelSelector = ({ selectedModel, setSelectedModel, customModels = [], onS
     || customModels.find(m => m.id === selectedModel)
     || MODELS[0];
 
-  const handleSaveCustom = () => {
-    if (!formName.trim() || !formBaseUrl.trim() || !formModelId.trim()) return;
-    const id = 'custom_' + formName.trim().toLowerCase().replace(/\s+/g, '_');
+  const handleSaveCustom = (modelData) => {
+    const id = 'custom_' + modelData.name.toLowerCase().replace(/\s+/g, '_');
     onSaveCustomModel({
       id,
-      name: formName.trim(),
-      baseUrl: formBaseUrl.trim(),
-      modelId: formModelId.trim(),
-      apiKey: formApiKey.trim(),
+      ...modelData,
     });
     setSelectedModel(id);
-    setFormName('');
-    setFormBaseUrl('');
-    setFormModelId('');
-    setFormApiKey('');
-    setShowForm(false);
     setIsOpen(false);
   };
 
@@ -143,75 +130,27 @@ const ModelSelector = ({ selectedModel, setSelectedModel, customModels = [], onS
             )}
 
             <div className="my-2 border-t border-[#7b9acc]/10" />
-            {showForm ? (
-              <div className="space-y-2 px-3 py-2">
-                <p className="text-[9px] font-black text-black/40 uppercase tracking-widest">Add Custom LLM</p>
-                <p className="text-[10px] text-black/50 leading-relaxed">
-                  Use Ollama, LM Studio, or any OpenAI-compatible local server.
-                </p>
-                <input
-                  type="text"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  placeholder="Display name (e.g., Ollama)"
-                  className="w-full px-2.5 py-1.5 text-xs border border-[#7b9acc]/30 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#7b9acc] text-black placeholder:text-black/30"
-                />
-                <input
-                  type="text"
-                  value={formBaseUrl}
-                  onChange={(e) => setFormBaseUrl(e.target.value)}
-                  placeholder="Base URL (e.g., http://localhost:11434/v1)"
-                  className="w-full px-2.5 py-1.5 text-xs border border-[#7b9acc]/30 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#7b9acc] text-black placeholder:text-black/30"
-                />
-                <input
-                  type="text"
-                  value={formModelId}
-                  onChange={(e) => setFormModelId(e.target.value)}
-                  placeholder="Model ID (e.g., llama3.2)"
-                  className="w-full px-2.5 py-1.5 text-xs border border-[#7b9acc]/30 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#7b9acc] text-black placeholder:text-black/30"
-                />
-                <input
-                  type="text"
-                  value={formApiKey}
-                  onChange={(e) => setFormApiKey(e.target.value)}
-                  placeholder="API Key (optional)"
-                  className="w-full px-2.5 py-1.5 text-xs border border-[#7b9acc]/30 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#7b9acc] text-black placeholder:text-black/30"
-                />
-                <div className="flex gap-2 pt-1">
-                  <button
-                    onClick={handleSaveCustom}
-                    className="flex-1 px-3 py-1.5 text-xs bg-[#7b9acc] text-white rounded-lg font-bold hover:opacity-90 transition-all"
-                  >
-                    Save
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowForm(false);
-                      setFormName('');
-                      setFormBaseUrl('');
-                      setFormModelId('');
-                      setFormApiKey('');
-                    }}
-                    className="px-3 py-1.5 text-xs border border-[#7b9acc]/30 text-black rounded-lg hover:bg-[#7b9acc]/10 transition-all"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowForm(true)}
-                className="w-full text-left px-3 py-2 rounded-xl text-xs text-[#7b9acc] hover:bg-[#7b9acc]/10 transition-all font-bold flex items-center gap-2"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                  <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-                </svg>
-                Add Custom LLM
-              </button>
-            )}
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                setIsModalOpen(true);
+              }}
+              className="w-full text-left px-3 py-2 rounded-xl text-xs text-[#7b9acc] hover:bg-[#7b9acc]/10 transition-all font-bold flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+              </svg>
+              Add Custom LLM
+            </button>
           </div>
         </div>
       )}
+
+      <CustomLLMModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveCustom}
+      />
     </div>
   );
 };
