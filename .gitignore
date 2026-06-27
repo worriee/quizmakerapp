@@ -15,6 +15,7 @@ dist-ssr
 .opencode
 AGENTS.md
 opencode.json
+server.js
 
 
 # Editor directories and files

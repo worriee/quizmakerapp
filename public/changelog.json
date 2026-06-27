@@ -1,10 +1,9 @@
 [
   {
-    "version": "1.0.1",
+    "version": "1.0.2",
     "notes": [
-      "Interactive quizzes with difficulty levels (Easy, Normal, Hard) and growth area tracking",
-      "Multi-model AI support: Gemini 3.1 Flash, Step 3.7 Flash, GLM 5.1",
-      "Custom/local LLM support — bring your own Ollama, LM Studio, or any OpenAI-compatible server"
+      "fixed custom model generated output, removed the thinking text of ai so it displays final output",
+      "fixed mobile responsiveness of adding custom llm ui"
     ]
   }
 ]

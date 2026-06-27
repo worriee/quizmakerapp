@@ -45,17 +45,17 @@ const CustomLLMModal = ({ isOpen, onClose, onSave, initialData = null }) => {
       onClick={handleBackdropClick}
     >
       <div
-        className="bg-[#FCF6F5] border border-[#7b9acc]/20 rounded-2xl shadow-2xl w-full max-w-md animate-in fade-in zoom-in-95 duration-200"
+        className="bg-[#FCF6F5] border border-[#7b9acc]/20 rounded-2xl shadow-2xl w-full max-w-md max-h-[95vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-[#FCF6F5] border-b border-[#7b9acc]/10 px-6 py-4 flex items-center justify-between rounded-t-2xl">
-          <div>
-            <h2 className="font-bold text-lg text-black">Add Custom LLM</h2>
-            <p className="text-xs text-black/50">Configure OpenAI-compatible server</p>
+        <div className="sticky top-0 bg-[#FCF6F5] border-b border-[#7b9acc]/10 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between rounded-t-2xl">
+          <div className="min-w-0">
+            <h2 className="font-bold text-base sm:text-lg text-black">Add Custom LLM</h2>
+            <p className="text-xs text-black/50 truncate">Configure OpenAI-compatible server</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 hover:bg-[#7b9acc]/10 rounded-full transition-all text-black/60 hover:text-black"
+            className="p-1.5 hover:bg-[#7b9acc]/10 rounded-full transition-all text-black/60 hover:text-black shrink-0"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -68,7 +68,7 @@ const CustomLLMModal = ({ isOpen, onClose, onSave, initialData = null }) => {
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
           <p className="text-xs text-black/50 leading-relaxed">
             Use Ollama, LM Studio, or any OpenAI-compatible local server.
           </p>
@@ -126,17 +126,17 @@ const CustomLLMModal = ({ isOpen, onClose, onSave, initialData = null }) => {
           </div>
         </div>
 
-        <div className="sticky bottom-0 bg-[#FCF6F5] border-t border-[#7b9acc]/10 px-6 py-4 flex gap-3 rounded-b-2xl">
+        <div className="sticky bottom-0 bg-[#FCF6F5] border-t border-[#7b9acc]/10 px-4 sm:px-6 py-3 sm:py-4 flex gap-3 rounded-b-2xl">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 text-sm border border-[#7b9acc]/30 text-black rounded-xl hover:bg-[#7b9acc]/10 transition-all font-medium"
+            className="flex-1 px-3 sm:px-4 py-2.5 sm:py-2 text-sm border border-[#7b9acc]/30 text-black rounded-xl hover:bg-[#7b9acc]/10 transition-all font-medium"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={!name.trim() || !baseUrl.trim() || !modelId.trim()}
-            className="flex-1 px-4 py-2 text-sm bg-[#7b9acc] text-white rounded-xl font-bold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 px-3 sm:px-4 py-2.5 sm:py-2 text-sm bg-[#7b9acc] text-white rounded-xl font-bold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Save Model
           </button>

@@ -38,7 +38,7 @@ const MainLayout = ({
   const menuRef = useRef(null);
   const profileRef = useRef(null);
 
-  const VERSION = "1.0.1";
+  const VERSION = "1.0.2";
 
   const hasNewVersion =
     typeof window !== "undefined" &&
@@ -347,7 +347,10 @@ const MainLayout = ({
                   {saveStatus === "saving" ? "Saving..." : "Sync Error"}
                 </span>
                 {saveStatus === "error" && (
-                  <button onClick={onRetrySave} className="sm:ml-0.5 hover:underline font-bold">
+                  <button
+                    onClick={onRetrySave}
+                    className="sm:ml-0.5 hover:underline font-bold"
+                  >
                     Retry
                   </button>
                 )}
@@ -382,8 +385,19 @@ const MainLayout = ({
                         onClick={() => setIsProfileOpen(false)}
                         className="p-1 hover:bg-[#7b9acc]/10 rounded-full transition-colors text-black hover:text-[#7b9acc]"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth={2}
+                          stroke="currentColor"
+                          className="w-4 h-4"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M6 18L18 6M6 6l12 12"
+                          />
                         </svg>
                       </button>
                     </div>
@@ -400,7 +414,11 @@ const MainLayout = ({
                         onClick={onLogout}
                         className="w-full mt-6 flex items-center justify-center gap-2 px-3 py-2.5 bg-[#FCF6F5] text-black rounded-xl hover:bg-[#7b9acc]/10 transition-all text-sm font-bold border border-[#7b9acc]/30"
                       >
-                        <img src={logoutIcon} alt="Logout" className="w-4 h-4 opacity-70" />
+                        <img
+                          src={logoutIcon}
+                          alt="Logout"
+                          className="w-4 h-4 opacity-70"
+                        />
                         Logout
                       </button>
                     </div>

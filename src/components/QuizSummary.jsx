@@ -26,7 +26,7 @@ const QuizSummary = ({ summary, score, total, onResetToChat, onGrowthRetry, hasW
           onClick={onResetToChat}
           className="w-full sm:w-auto px-8 py-3 bg-[#7b9acc] text-[#FCF6F5] rounded-xl font-semibold hover:bg-[#7b9acc]/80 transition-all shadow-md"
         >
-          Try Another Topic
+          Back to Chats
         </button>
       </div>
     </div>

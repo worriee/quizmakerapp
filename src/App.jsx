@@ -314,9 +314,6 @@ function App() {
       const controller = new AbortController();
       setAbortController(controller);
 
-      const quizIntentRegex = /quiz|test|questions|\d+\s*items/i;
-      const userWantsQuiz = quizIntentRegex.test(text);
-
       try {
         if (!sessionId) {
           const initialTopic = text.length > 30 ? text.substring(0, 30) + "..." : text;
@@ -335,18 +332,6 @@ function App() {
           } catch (error) {
             console.error("Error creating initial session:", error);
           }
-        }
-
-        if (userWantsQuiz) {
-          console.log('[Auto-Quiz] Detected quiz intent, starting quiz directly...');
-          const userHistoryEntry = { role: "user", parts: [{ text }] };
-          handleStartQuiz(
-            { itemCount: 5, difficulty: 'Normal' },
-            sessionId,
-            [userHistoryEntry],
-            text.length > 30 ? text.substring(0, 30) + "..." : text,
-          );
-          return;
         }
 
         const response = await fetch(`${API_BASE_URL}/chat`, {
@@ -376,7 +361,7 @@ function App() {
         const data = await response.json();
         const rawResponse = data.raw || "";
 
-        const { title, thought, final, structured } = parseAIResponse(rawResponse);
+        const { title, thought, final, fallbackTitle, structured } = parseAIResponse(rawResponse);
         const displayText = structured.text || final;
 
         if (structured.type === "quiz") {
@@ -389,7 +374,7 @@ function App() {
 
           const topic =
             !currentSessionId
-              ? title || (text.length > 30 ? text.substring(0, 30) + "..." : text)
+              ? title || fallbackTitle || (text.length > 30 ? text.substring(0, 30) + "..." : text)
               : sessions.find((s) => s.id === currentSessionId)?.topic || "Chat";
 
           saveSessionToDb(updatedHistory, topic, sessionId).catch(() => {
@@ -422,7 +407,7 @@ function App() {
 
         const topic =
           !currentSessionId
-            ? title || (text.length > 30 ? text.substring(0, 30) + "..." : text)
+            ? title || fallbackTitle || (text.length > 30 ? text.substring(0, 30) + "..." : text)
             : sessions.find((s) => s.id === currentSessionId)?.topic || "Chat";
 
         saveSessionToDb(updatedHistory, topic, sessionId).catch(() => {
@@ -744,7 +729,10 @@ function App() {
               messages={messages}
               onSendMessage={handleSendMessage}
               isLoading={isLoading}
-              onStartQuiz={() => setView('quizSetup')}
+              onStartQuiz={() => {
+                if (messages.length === 0) return;
+                setView('quizSetup');
+              }}
               onStopGenerating={stopGenerating}
             />
           )}
@@ -767,7 +755,7 @@ function App() {
               summary={quizData?.summary}
               score={quizScore}
               total={quizData?.progress?.total}
-              onReset={handleResetToChat}
+              onResetToChat={handleResetToChat}
               onGrowthRetry={() => handleStartQuiz({ ...quizParams, growthAreas: wrongAnswers })}
               hasWrongAnswers={wrongAnswers.length > 0}
             />
