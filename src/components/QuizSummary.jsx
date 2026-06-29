@@ -1,4 +1,11 @@
-const QuizSummary = ({ summary, score, total, onResetToChat, onGrowthRetry, hasWrongAnswers }) => {
+const QuizSummary = ({
+  summary,
+  score,
+  total,
+  onResetToChat,
+  onGrowthRetry,
+  hasWrongAnswers,
+}) => {
   return (
     <div className="flex flex-col items-center justify-center h-full p-4 sm:p-6 text-center space-y-8 animate-in fade-in zoom-in duration-500">
       <div className="space-y-4 max-w-2xl">
@@ -9,7 +16,8 @@ const QuizSummary = ({ summary, score, total, onResetToChat, onGrowthRetry, hasW
           {score} / {total}
         </div>
         <p className="text-lg text-black/80 leading-relaxed">
-          {summary || "Great effort! Review your notes and try again to master the topic."}
+          {summary ||
+            "Great effort! Review your notes and try again to master the topic."}
         </p>
       </div>
 

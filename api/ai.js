@@ -63,6 +63,83 @@ TUTORING RULES:
 `;
 
 /**
+ * PRIVATE_IP_PATTERNS: Regex patterns for blocking private/internal IPs in production.
+ * Prevents SSRF attacks targeting cloud metadata endpoints and internal networks.
+ */
+const PRIVATE_IP_PATTERNS = [
+  /^localhost$/i,
+  /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,
+  /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,
+  /^192\.168\.\d{1,3}\.\d{1,3}$/,
+  /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/,
+  /^169\.254\.\d{1,3}\.\d{1,3}$/,
+  /^0\.0\.0\.0$/,
+];
+
+/**
+ * isPrivateIp: Checks if a hostname resolves to a private/internal IP.
+ * @param {string} hostname - The hostname to check.
+ * @returns {boolean} True if the hostname matches a private IP pattern.
+ */
+function isPrivateIp(hostname) {
+  return PRIVATE_IP_PATTERNS.some((pattern) => pattern.test(hostname));
+}
+
+/**
+ * validateApiUrl: Validates URL format, blocks non-HTTP protocols, and blocks private IPs in production.
+ * Prevents SSRF attacks via file://, ftp://, malformed URLs, and internal network access.
+ * @param {string} baseUrl - The URL to validate.
+ */
+function validateApiUrl(baseUrl) {
+  if (!baseUrl || typeof baseUrl !== 'string') {
+    throw new Error('Invalid URL: empty or not a string');
+  }
+  if (baseUrl.length > 500) {
+    throw new Error('Invalid URL: exceeds 500 character limit');
+  }
+  if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+    throw new Error('Invalid URL: must start with http:// or https://');
+  }
+  try {
+    const url = new URL(baseUrl);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      throw new Error(`Invalid URL: protocol "${url.protocol}" not allowed`);
+    }
+    // Block private/internal IPs in production to prevent SSRF
+    if (process.env.NODE_ENV === 'production' && isPrivateIp(url.hostname)) {
+      throw new Error('Invalid URL: private/internal addresses are not allowed');
+    }
+  } catch (err) {
+    if (
+      err.message.includes('not allowed') ||
+      err.message.includes('exceeds') ||
+      err.message.includes('empty') ||
+      err.message.includes('private/internal')
+    ) {
+      throw err;
+    }
+    throw new Error('Invalid URL: malformed address');
+  }
+}
+
+/**
+ * validateModelId: Validates model ID to prevent path traversal and injection.
+ * @param {string} modelId - The model ID to validate.
+ */
+function validateModelId(modelId) {
+  if (!modelId || typeof modelId !== 'string') {
+    throw new Error('Invalid model ID: empty or not a string');
+  }
+  if (modelId.length > 200) {
+    throw new Error('Invalid model ID: exceeds 200 character limit');
+  }
+  // eslint-disable-next-line no-control-regex
+  if (/[/\\.\x00-\x1f]/.test(modelId)) {
+    throw new Error('Model ID contains invalid characters');
+  }
+}
+
+/**
  * timeoutPromise: Rejects after ms to prevent Vercel timeouts.
  */
 const timeoutPromise = (ms) =>
@@ -105,6 +182,9 @@ async function callOpenAICompatibleAPI(config, message, history) {
     headers["Authorization"] = `Bearer ${apiKey}`;
   }
 
+  // Validate URL before making the request
+  validateApiUrl(config.baseUrl);
+
   const response = await fetch(`${config.baseUrl}/chat/completions`, {
     method: "POST",
     headers,
@@ -113,6 +193,7 @@ async function callOpenAICompatibleAPI(config, message, history) {
       messages: messages,
       temperature: 0.7,
     }),
+    redirect: "error",
   });
 
   if (!response.ok) {
@@ -135,6 +216,7 @@ async function callOpenAICompatibleAPI(config, message, history) {
 export async function handleChat(message, history, modelId, customModelConfig = null) {
   // If a custom model config is provided, use it directly (bypass MODEL_CONFIGS)
   if (customModelConfig) {
+    validateModelId(customModelConfig.modelId);
     const config = {
       baseUrl: customModelConfig.baseUrl.replace(/\/+$/, ''), // strip trailing slash
       modelId: customModelConfig.modelId,

@@ -205,6 +205,10 @@ app.post('/api/chat', chatLimiter, authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Message is required and must be a non-empty string' });
     }
 
+    if (!Array.isArray(history) || history.length > 100) {
+      return res.status(400).json({ error: 'History must be an array with at most 100 entries' });
+    }
+
     const rawAIResponse = await handleChat(message.trim(), history || [], model, customModelConfig);
     res.json({ raw: rawAIResponse });
   } catch (error) {

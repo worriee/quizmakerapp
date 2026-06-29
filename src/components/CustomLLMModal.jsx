@@ -1,10 +1,27 @@
 import { useState, useEffect } from 'react';
 
+const MAX_URL_LENGTH = 500;
+
+const isValidApiUrl = (url) => {
+  if (!url || url.length === 0) return { valid: true, error: '' };
+  if (url.length > MAX_URL_LENGTH) return { valid: false, error: `Max ${MAX_URL_LENGTH} characters` };
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    return { valid: false, error: 'Must start with http:// or https://' };
+  }
+  try {
+    new URL(url);
+    return { valid: true, error: '' };
+  } catch {
+    return { valid: false, error: 'Invalid URL format' };
+  }
+};
+
 const CustomLLMModal = ({ isOpen, onClose, onSave, initialData = null }) => {
   const [name, setName] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [modelId, setModelId] = useState('');
   const [apiKey, setApiKey] = useState('');
+  const [urlError, setUrlError] = useState('');
 
   useEffect(() => {
     if (initialData) {
@@ -18,10 +35,23 @@ const CustomLLMModal = ({ isOpen, onClose, onSave, initialData = null }) => {
       setModelId('');
       setApiKey('');
     }
+    setUrlError('');
   }, [initialData, isOpen]);
 
+  const handleBaseUrlChange = (value) => {
+    setBaseUrl(value);
+    const result = isValidApiUrl(value);
+    setUrlError(result.error);
+  };
+
+  const isFormValid = () => {
+    if (!name.trim() || !baseUrl.trim() || !modelId.trim()) return false;
+    const { valid } = isValidApiUrl(baseUrl.trim());
+    return valid;
+  };
+
   const handleSave = () => {
-    if (!name.trim() || !baseUrl.trim() || !modelId.trim()) return;
+    if (!isFormValid()) return;
     onSave({
       name: name.trim(),
       baseUrl: baseUrl.trim(),
@@ -70,7 +100,7 @@ const CustomLLMModal = ({ isOpen, onClose, onSave, initialData = null }) => {
 
         <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
           <p className="text-xs text-black/50 leading-relaxed">
-            Use Ollama, LM Studio, or any OpenAI-compatible local server.
+            Add any OpenAI-compatible API provider with your own API key.
           </p>
 
           <div>
@@ -81,7 +111,7 @@ const CustomLLMModal = ({ isOpen, onClose, onSave, initialData = null }) => {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Ollama"
+              placeholder="e.g., My OpenAI"
               className="w-full px-3 py-2 text-sm border border-[#7b9acc]/30 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#7b9acc] text-black placeholder:text-black/30"
             />
           </div>
@@ -93,10 +123,15 @@ const CustomLLMModal = ({ isOpen, onClose, onSave, initialData = null }) => {
             <input
               type="text"
               value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
-              placeholder="e.g., http://localhost:11434/v1"
-              className="w-full px-3 py-2 text-sm border border-[#7b9acc]/30 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#7b9acc] text-black placeholder:text-black/30"
+              onChange={(e) => handleBaseUrlChange(e.target.value)}
+              placeholder="e.g., https://api.openai.com/v1"
+              className={`w-full px-3 py-2 text-sm border rounded-xl bg-white focus:outline-none focus:ring-2 text-black placeholder:text-black/30 ${
+                urlError
+                  ? 'border-red-400 focus:ring-red-300'
+                  : 'border-[#7b9acc]/30 focus:ring-[#7b9acc]'
+              }`}
             />
+            {urlError && <p className="text-xs text-red-500 mt-1">{urlError}</p>}
           </div>
 
           <div>
@@ -135,7 +170,7 @@ const CustomLLMModal = ({ isOpen, onClose, onSave, initialData = null }) => {
           </button>
           <button
             onClick={handleSave}
-            disabled={!name.trim() || !baseUrl.trim() || !modelId.trim()}
+            disabled={!isFormValid()}
             className="flex-1 px-3 sm:px-4 py-2.5 sm:py-2 text-sm bg-[#7b9acc] text-white rounded-xl font-bold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Save Model
