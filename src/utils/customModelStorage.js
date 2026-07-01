@@ -1,8 +1,9 @@
 /**
  * Custom Model Storage Utility
  * Implements SEC-014: API Key Protection via sessionStorage isolation
+ * Implements SEC-011: sendHistory consent flag per custom model
  *
- * - localStorage: Stores model metadata (name, baseUrl, modelId) WITHOUT apiKeys
+ * - localStorage: Stores model metadata (name, baseUrl, modelId, sendHistory) WITHOUT apiKeys
  * - sessionStorage: Stores API keys separately (cleared when browser tab closes)
  */
 
@@ -28,6 +29,7 @@ export function loadCustomModels() {
     return models.map((model) => ({
       ...model,
       apiKey: apiKeys[model.id] || "",
+      sendHistory: model.sendHistory || false,
     }));
   } catch (error) {
     console.error("Failed to load custom models:", error);
@@ -121,7 +123,7 @@ export function getCustomModelById(modelId) {
  * @param {Object} metadata - Model metadata (name, baseUrl, modelId)
  * @returns {string} Generated model ID
  */
-function generateModelId(metadata) {
+export function generateModelId(metadata) {
   const base = metadata.name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")

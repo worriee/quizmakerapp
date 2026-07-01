@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import CustomLLMModal from './CustomLLMModal';
+import { generateModelId } from '../utils/customModelStorage';
 
 const MODELS = [
 { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite' },
@@ -27,7 +28,7 @@ const ModelSelector = ({ selectedModel, setSelectedModel, customModels = [], onS
     || MODELS[0];
 
   const handleSaveCustom = (modelData) => {
-    const id = 'custom_' + modelData.name.toLowerCase().replace(/\s+/g, '_');
+    const id = generateModelId(modelData);
     onSaveCustomModel({
       id,
       ...modelData,
@@ -57,7 +58,7 @@ const ModelSelector = ({ selectedModel, setSelectedModel, customModels = [], onS
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-[#FCF6F5] border border-[#7b9acc]/20 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 sm:w-64 bg-[#FCF6F5] border border-[#7b9acc]/20 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
           <div className="p-2 max-h-80 overflow-y-auto">
             <p className="px-3 py-2 text-[9px] font-black text-black/40 uppercase tracking-widest">Built-in Models</p>
             <div className="space-y-1">

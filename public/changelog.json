@@ -1,9 +1,13 @@
 [
   {
-    "version": "1.0.2",
+    "version": "1.1.0",
     "notes": [
-      "fixed custom model generated output, removed the thinking text of ai so it displays final output",
-      "fixed mobile responsiveness of adding custom llm ui"
+      "email verification and password reset now available",
+      "stronger password requirements on sign up",
+      "accounts auto-lock after 5 wrong password attempts",
+      "more rate limits for each built-in models",
+      "fixed security for entire app",
+      "faster and more reliable offline support"
     ]
   }
 ]

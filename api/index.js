@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import { handleChat } from './ai.js';
 import { authRouter, supabaseService, authenticate } from './auth.js';
+import { sanitizeMessage, detectPromptInjection, validateAiOutput } from './sanitize.js';
 
 const app = express();
 
@@ -13,7 +14,7 @@ app.use(cors({
   origin: process.env.NODE_ENV === 'production' ? PRODUCTION_ORIGIN : true,
   credentials: true,
 }));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 
 const authLimiter = rateLimit({
@@ -24,9 +25,24 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const MODEL_RPM_LIMITS = {
+  'gemini-3.1-flash-lite': 15,
+  'step-3.7-flash': 40,
+  'glm-5.1': 40,
+};
+const DEFAULT_RPM = 20;
+
 const chatLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 30,
+  max: (req) => {
+    const model = req.body?.model || 'default';
+    return MODEL_RPM_LIMITS[model] || DEFAULT_RPM;
+  },
+  keyGenerator: (req) => {
+    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+    const model = req.body?.model || 'default';
+    return `${ip}:${model}`;
+  },
   message: { error: 'Too many requests. Please slow down.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -51,7 +67,7 @@ sessionRouter.get('/', authenticate, async (req, res) => {
     if (error) throw error;
     res.json({ sessions: data || [] });
   } catch (error) {
-    console.error('[Session] List error:', error);
+    console.error('[Session] List error:', error.message || error);
     res.status(500).json({ error: error.message || 'Failed to fetch sessions' });
   }
 });
@@ -69,7 +85,7 @@ sessionRouter.get('/:id', authenticate, async (req, res) => {
     if (error) throw error;
     res.json({ session: data });
   } catch (error) {
-    console.error('[Session] Get error:', error);
+    console.error('[Session] Get error:', error.message || error);
     res.status(500).json({ error: error.message || 'Failed to fetch session' });
   }
 });
@@ -97,7 +113,7 @@ sessionRouter.post('/create', authenticate, async (req, res) => {
     if (error) throw error;
     res.status(201).json({ session: data[0] });
   } catch (error) {
-    console.error('[Session] Create error:', error);
+    console.error('[Session] Create error:', error.message || error);
     res.status(500).json({ error: error.message || 'Failed to create session' });
   }
 });
@@ -117,7 +133,7 @@ sessionRouter.post('/:id/update', authenticate, async (req, res) => {
     if (error) throw error;
     res.json({ session: data[0] });
   } catch (error) {
-    console.error('[Session] Update error:', error);
+    console.error('[Session] Update error:', error.message || error);
     res.status(500).json({ error: error.message || 'Failed to update session' });
   }
 });
@@ -141,7 +157,7 @@ sessionRouter.post('/:id/rename', authenticate, async (req, res) => {
     if (error) throw error;
     res.json({ session: data[0] });
   } catch (error) {
-    console.error('[Session] Rename error:', error);
+    console.error('[Session] Rename error:', error.message || error);
     res.status(500).json({ error: error.message || 'Failed to rename session' });
   }
 });
@@ -168,7 +184,7 @@ sessionRouter.post('/:id/pin', authenticate, async (req, res) => {
     if (error) throw error;
     res.json({ session: data[0] });
   } catch (error) {
-    console.error('[Session] Pin error:', error);
+    console.error('[Session] Pin error:', error.message || error);
     res.status(500).json({ error: error.message || 'Failed to toggle pin' });
   }
 });
@@ -185,7 +201,7 @@ sessionRouter.delete('/:id', authenticate, async (req, res) => {
     if (error) throw error;
     res.json({ ok: true });
   } catch (error) {
-    console.error('[Session] Delete error:', error);
+    console.error('[Session] Delete error:', error.message || error);
     res.status(500).json({ error: error.message || 'Failed to delete session' });
   }
 });
@@ -209,10 +225,32 @@ app.post('/api/chat', chatLimiter, authenticate, async (req, res) => {
       return res.status(400).json({ error: 'History must be an array with at most 100 entries' });
     }
 
-    const rawAIResponse = await handleChat(message.trim(), history || [], model, customModelConfig);
+    // Layer 1: Sanitize input — strip control chars, enforce length limit
+    let cleanedMessage;
+    try {
+      cleanedMessage = sanitizeMessage(message);
+    } catch (err) {
+      return res.status(400).json({ error: err.message });
+    }
+
+    // Layer 1b: Detect prompt injection patterns
+    const injectionCheck = detectPromptInjection(cleanedMessage);
+    if (injectionCheck.blocked) {
+      console.warn(`[Sanitize] Blocked ${injectionCheck.severity} injection: ${injectionCheck.reason}`);
+      return res.status(400).json({ error: 'Your message was blocked by our content policy.' });
+    }
+
+    const rawAIResponse = await handleChat(cleanedMessage, history || [], model, customModelConfig);
+
+    // Layer 3: Validate AI output structure
+    const outputCheck = validateAiOutput(rawAIResponse);
+    if (!outputCheck.valid) {
+      console.warn(`[Sanitize] AI output warning: ${outputCheck.error}`);
+    }
+
     res.json({ raw: rawAIResponse });
   } catch (error) {
-    console.error('[Server] Internal Server Error:', error);
+    console.error('[Server] Internal Server Error:', error.message || error);
     const errorMessage = error.message || 'An unexpected error occurred';
     res.status(500).json({ error: errorMessage });
   }

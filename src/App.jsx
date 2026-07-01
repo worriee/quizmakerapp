@@ -5,6 +5,9 @@ import Login from "./components/Login";
 import QuizInterface from "./components/QuizInterface";
 import QuizSummary from "./components/QuizSummary";
 import QuizSetup from "./components/QuizSetup";
+import VerifyEmail from "./components/VerifyEmail";
+import ForgotPassword from "./components/ForgotPassword";
+import ResetPassword from "./components/ResetPassword";
 import { parseAIResponse } from "./utils/aiParser";
 import {
   loadCustomModels,
@@ -19,6 +22,12 @@ const MODEL_STORAGE_KEY = "quizmaker_selected_model";
 const DEFAULT_MODEL = "gemini-3.1-flash-lite";
 
 function App() {
+  // Simple path-based routing for auth pages (no React Router needed)
+  const path = window.location.pathname;
+  if (path === "/verify-email") return <VerifyEmail />;
+  if (path === "/forgot-password") return <ForgotPassword />;
+  if (path === "/reset-password") return <ResetPassword />;
+
   const [user, setUser] = useState(null);
   const [bootStatus, setBootStatus] = useState("INITIALIZING");
   const bootStatusRef = useRef("INITIALIZING");
@@ -384,8 +393,12 @@ function App() {
           const errorText = await response.text();
           console.error(`Server Error ${response.status}:`, errorText);
           let errorMsg = `Server responded with ${response.status}`;
-          const errorData = JSON.parse(errorText);
-          errorMsg = errorData.error || errorMsg;
+          try {
+            const errorData = JSON.parse(errorText);
+            errorMsg = errorData.error || errorMsg;
+          } catch {
+            // Non-JSON response (e.g., HTML 502 page) — use raw status text
+          }
           throw new Error(errorMsg);
         }
 

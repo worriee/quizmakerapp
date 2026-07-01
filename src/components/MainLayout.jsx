@@ -38,7 +38,7 @@ const MainLayout = ({
   const menuRef = useRef(null);
   const profileRef = useRef(null);
 
-  const VERSION = "1.0.2";
+  const VERSION = "1.1.0";
 
   const hasNewVersion =
     typeof window !== "undefined" &&

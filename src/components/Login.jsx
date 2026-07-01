@@ -1,6 +1,27 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 const API_BASE_URL = '/api';
+
+const COMMON_PASSWORDS = new Set([
+  'password', 'password1', 'password123', 'p@ssword', 'p@ssw0rd', 'pass123',
+  '123456', '12345678', '123456789', '12345', '1234567', '1234567890',
+  'qwerty', 'qwerty123', 'qwertyuiop',
+  'abc123', 'abcdef', 'abcdefg',
+  'monkey', 'dragon', 'master', 'login', 'princess', 'football',
+  'shadow', 'sunshine', 'trustno1', 'iloveyou', 'batman', 'access',
+  'hello', 'charlie', 'donald', 'admin', 'welcome', 'passw0rd',
+  'letmein', 'mustang', 'michael', 'ninja', 'mustang1', 'jesus',
+  'changeme', 'test', 'guest', 'hello123',
+  'summer', 'winter', 'spring', 'fall', 'love', 'secret', 'solo',
+]);
+
+const getPasswordChecks = (pw) => [
+  { label: 'At least 8 characters', met: pw.length >= 8 },
+  { label: 'One uppercase letter', met: /[A-Z]/.test(pw) },
+  { label: 'One lowercase letter', met: /[a-z]/.test(pw) },
+  { label: 'One number', met: /[0-9]/.test(pw) },
+  { label: 'Not a common password', met: pw.length > 0 && !COMMON_PASSWORDS.has(pw.toLowerCase()) },
+];
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -9,17 +30,21 @@ const Login = () => {
   const [error, setError] = useState(null);
   const [isSignUp, setIsSignUp] = useState(false);
 
+  const passwordChecks = useMemo(() => getPasswordChecks(password), [password]);
+  const passwordValid = passwordChecks.every((c) => c.met);
+
   const formatAuthError = (message) => {
     const map = {
       'Invalid login credentials': 'Invalid email or password.',
       'Email not confirmed': 'Please confirm your email first.',
       'User already registered': 'An account with this email already exists.',
-      'Password should be at least 6 characters': 'Password must be at least 6 characters.',
       'Unable to validate email address: invalid format': 'Please enter a valid email address.',
+      'Account locked': 'Account locked due to too many failed attempts. Please try again later.',
     };
     for (const [key, val] of Object.entries(map)) {
       if (message.includes(key)) return val;
     }
+    if (message.startsWith('Password must have:')) return message;
     return 'Something went wrong. Please try again.';
   };
 
@@ -49,7 +74,6 @@ const Login = () => {
         alert('Account created successfully! Please log in.');
         setIsSignUp(false);
       } else {
-        // Redirect or let parent handle it
         window.location.href = '/';
       }
     } catch (err) {
@@ -91,9 +115,32 @@ const Login = () => {
               className="w-full px-4 py-2 rounded-lg border border-[#7b9acc]/30 focus:ring-2 focus:ring-[#7b9acc] outline-none transition-all"
               placeholder="••••••••"
               required
-              minLength={6}
+              minLength={8}
             />
+            {!isSignUp && (
+              <div className="text-right mt-1">
+                <a href="/forgot-password" className="text-xs text-[#7b9acc] hover:underline">
+                  Forgot password?
+                </a>
+              </div>
+            )}
           </div>
+
+          {/* Password Requirements (signup only) */}
+          {isSignUp && password.length > 0 && (
+            <div className="space-y-1">
+              {passwordChecks.map((check) => (
+                <div key={check.label} className="flex items-center gap-2 text-[11px]">
+                  <span className={check.met ? 'text-green-500' : 'text-black/30'}>
+                    {check.met ? '✓' : '○'}
+                  </span>
+                  <span className={check.met ? 'text-green-600' : 'text-black/40'}>
+                    {check.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Error Notification */}
           {error && (
@@ -104,7 +151,7 @@ const Login = () => {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (isSignUp && !passwordValid)}
             className="w-full bg-[#7b9acc] text-white font-semibold py-2 rounded-lg hover:bg-[#7b9acc] transition-colors shadow-md disabled:bg-[#7b9acc]/30"
           >
             {loading ? (isSignUp ? 'Creating account...' : 'Signing in...') : (isSignUp ? 'Sign Up' : 'Sign In')}
