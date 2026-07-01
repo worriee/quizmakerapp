@@ -1,6 +1,6 @@
 # TUON AI
 
-> Study to Understand, Navigate to Succeed.
+> To Understand Own Navigation.
 
 ![Version](https://img.shields.io/badge/version-1.1.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
