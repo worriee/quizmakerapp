@@ -42,7 +42,7 @@ const MainLayout = ({
   const menuRef = useRef(null);
   const profileRef = useRef(null);
 
-  const VERSION = "1.1.0";
+  const VERSION = "1.1.5";
 
   const hasNewVersion =
     typeof window !== "undefined" &&
@@ -183,27 +183,27 @@ const MainLayout = ({
             ref={menuRef}
             className="absolute right-0 top-full w-40 bg-app-surface border border-app rounded-xl shadow-xl z-50 py-1.5 animate-in fade-in zoom-in-95 duration-100"
           >
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onTogglePin(session.id, session.pinned);
-                }}
-                className="w-full text-left px-3 py-2 text-sm text-app-secondary hover:bg-[#7b9acc]/10 hover:text-app flex items-center gap-3 transition-colors"
-              >
-                <img src={pinIcon} alt="Pin" className="w-4 h-4 opacity-70" />
-                {session.pinned ? "Unpin" : "Pin"}
-              </button>
-              <button
-                onClick={(e) => startRename(e, session)}
-                className="w-full text-left px-3 py-2 text-sm text-app-secondary hover:bg-[#7b9acc]/10 hover:text-app flex items-center gap-3 transition-colors"
-              >
-                <img
-                  src={renameIcon}
-                  alt="Rename"
-                  className="w-4 h-4 opacity-70"
-                />
-                Rename
-              </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onTogglePin(session.id, session.pinned);
+              }}
+              className="w-full text-left px-3 py-2 text-sm text-app-secondary hover:bg-[#7b9acc]/10 hover:text-app flex items-center gap-3 transition-colors"
+            >
+              <img src={pinIcon} alt="Pin" className="w-4 h-4 opacity-70" />
+              {session.pinned ? "Unpin" : "Pin"}
+            </button>
+            <button
+              onClick={(e) => startRename(e, session)}
+              className="w-full text-left px-3 py-2 text-sm text-app-secondary hover:bg-[#7b9acc]/10 hover:text-app flex items-center gap-3 transition-colors"
+            >
+              <img
+                src={renameIcon}
+                alt="Rename"
+                className="w-4 h-4 opacity-70"
+              />
+              Rename
+            </button>
             <div className="my-1 border-t border-[#7b9acc]/10" />
             <button
               onClick={(e) => handleDelete(e, session.id)}
@@ -337,11 +337,19 @@ const MainLayout = ({
               className="p-1.5 rounded-full hover:bg-[#7b9acc]/10 transition-all text-app/70 hover:text-app"
               aria-label="Toggle theme"
             >
-      {theme === "dark" ? (
-        <img src={lightIcon} alt="Light mode" className="w-4 h-4 sm:w-5 sm:h-5" />
-      ) : (
-        <img src={darkIcon} alt="Dark mode" className="w-4 h-4 sm:w-5 sm:h-5" />
-      )}
+              {theme === "dark" ? (
+                <img
+                  src={lightIcon}
+                  alt="Light mode"
+                  className="w-4 h-4 sm:w-5 sm:h-5"
+                />
+              ) : (
+                <img
+                  src={darkIcon}
+                  alt="Dark mode"
+                  className="w-4 h-4 sm:w-5 sm:h-5"
+                />
+              )}
             </button>
 
             {saveStatus !== "synced" && (
@@ -392,15 +400,15 @@ const MainLayout = ({
                   ref={profileRef}
                   className="absolute right-0 top-full mt-2 w-64 bg-app-surface border border-app rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2"
                 >
-                   <div className="p-5">
-                     <div className="flex justify-between items-center mb-5">
-                       <h3 className="text-[10px] font-black text-app-muted uppercase tracking-widest">
-                         User Profile
-                       </h3>
-                       <button
-                         onClick={() => setIsProfileOpen(false)}
-                         className="p-1 hover:bg-[#7b9acc]/10 rounded-full transition-colors text-app hover:text-[#7b9acc]"
-                       >
+                  <div className="p-5">
+                    <div className="flex justify-between items-center mb-5">
+                      <h3 className="text-[10px] font-black text-app-muted uppercase tracking-widest">
+                        User Profile
+                      </h3>
+                      <button
+                        onClick={() => setIsProfileOpen(false)}
+                        className="p-1 hover:bg-[#7b9acc]/10 rounded-full transition-colors text-app hover:text-[#7b9acc]"
+                      >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           fill="none"

@@ -1,13 +1,14 @@
 [
   {
-    "version": "1.1.0",
+    "version": "1.1.5",
     "notes": [
       "email verification and password reset now available",
       "stronger password requirements on sign up",
       "accounts auto-lock after 5 wrong password attempts",
       "more rate limits for each built-in models",
       "fixed security for entire app",
-      "faster and more reliable offline support"
+      "faster and more reliable offline support",
+      "added dark mode"
     ]
   }
 ]
