@@ -68,6 +68,21 @@ function App() {
     return saved || DEFAULT_MODEL;
   });
   const [customModels, setCustomModels] = useState(() => loadCustomModels());
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("quizmaker_theme") || "light";
+    }
+    return "light";
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    localStorage.setItem("quizmaker_theme", theme);
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => (prev === "light" ? "dark" : "light"));
+  }, []);
 
   const handleSetSelectedModel = useCallback((model) => {
     setSelectedModel(model);
@@ -800,7 +815,7 @@ function App() {
   return (
     <>
       {bootStatus === "INITIALIZING" || bootStatus === "AUTHENTICATING" ? (
-        <div className="flex items-center justify-center h-screen w-full bg-[#FCF6F5] text-[#7b9acc]">
+        <div className="flex items-center justify-center h-screen w-full bg-app text-[#7b9acc]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#7b9acc] mx-auto mb-4"></div>
             <p className="text-xl font-bold text-[#7b9acc]">
@@ -832,6 +847,8 @@ function App() {
           customModels={customModels}
           onSaveCustomModel={handleSaveCustomModel}
           onDeleteCustomModel={handleDeleteCustomModel}
+          theme={theme}
+          onToggleTheme={toggleTheme}
         >
           {view === "chat" && (
             <ChatInterface

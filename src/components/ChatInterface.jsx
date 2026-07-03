@@ -2,6 +2,37 @@ import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 
+/** Custom renderers so wide markdown content (code blocks, tables, long lines)
+ *  scrolls horizontally in a themed strip directly below the surrounding text
+ *  instead of widening the chat bubble or wrapping awkwardly. The strip uses
+ *  overflow-x-auto and inherits the ERR-046 themed scrollbar so it blends
+ *  with the active light/dark theme. */
+const markdownComponents = {
+  pre: ({ children }) => (
+    <div className="overflow-x-auto my-2 rounded-lg bg-app-surface border border-app">
+      <pre className="px-3 py-2 m-0 text-xs sm:text-sm leading-relaxed whitespace-pre">
+        {children}
+      </pre>
+    </div>
+  ),
+  code: ({ inline, children, ...props }) =>
+    inline ? (
+      <code
+        className="px-1 py-0.5 rounded bg-app-surface text-[#7b9acc] text-xs sm:text-sm"
+        {...props}
+      >
+        {children}
+      </code>
+    ) : (
+      <code {...props}>{children}</code>
+    ),
+  table: ({ children }) => (
+    <div className="overflow-x-auto my-2">
+      <table className="border-collapse text-xs sm:text-sm">{children}</table>
+    </div>
+  ),
+};
+
 /** ChatInterface Component: primary chat UI with markdown and quiz rendering. */
 const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
   const [input, setInput] = useState("");
@@ -31,9 +62,9 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-5 sm:space-y-6">
+    <div className="flex flex-col h-full min-h-0 text-app">
+       {/* Messages Area */}
+       <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-5 sm:space-y-6">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-6 sm:p-8">
             <div className="flex items-center gap-3">
@@ -53,14 +84,17 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
                   className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-5 py-3 ${
                     msg.role === "user"
                       ? "bg-[#7b9acc] text-white rounded-br-sm"
-                      : "bg-[#FCF6F5] text-black border border-[#7b9acc]/20 rounded-bl-sm"
+                      : "bg-app text-app border border-app rounded-bl-sm"
                   }`}
                 >
                   {msg.type === "quiz" ? (
                     <div className="text-sm">{msg.text}</div>
                   ) : (
-                    <div className="prose prose-sm max-w-none text-black leading-relaxed">
-                      <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+                    <div className="prose prose-sm max-w-none break-words text-app leading-relaxed">
+                      <ReactMarkdown
+                        rehypePlugins={[rehypeSanitize]}
+                        components={markdownComponents}
+                      >
                         {msg.text}
                       </ReactMarkdown>
                     </div>
@@ -70,7 +104,7 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
             ))}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-[#FCF6F5] text-black border border-[#7b9acc]/20 rounded-2xl rounded-bl-sm px-5 py-3">
+                <div className="bg-app text-app border border-app rounded-2xl rounded-bl-sm px-5 py-3">
                   <div className="flex items-center gap-2">
                     <div
                       className="w-2 h-2 bg-[#7b9acc] rounded-full animate-bounce"
@@ -94,7 +128,7 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-[#7b9acc]/20 p-3 sm:p-4 bg-[#FCF6F5]">
+      <div className="border-t border-app p-3 sm:p-4 bg-app">
         <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-3">
           <textarea
             ref={textareaRef}
@@ -103,14 +137,14 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
             onKeyDown={handleKeyDown}
             placeholder="Ask TUON AI anything..."
             rows={1}
-            className="flex-1 resize-none rounded-xl border border-[#7b9acc]/30 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-black placeholder:text-black/40 focus:outline-none focus:ring-2 focus:ring-[#7b9acc]"
+            className="flex-1 resize-none rounded-xl border border-app bg-app-surface px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-app placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-[#7b9acc]"
           />
           <div className="flex flex-col gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={onStartQuiz}
               disabled={isLoading}
-              className="px-3 sm:px-4 py-2 rounded-xl bg-[#FCF6F5] text-black border border-[#7b9acc]/30 text-xs sm:text-sm font-medium hover:bg-[#7b9acc]/10 disabled:opacity-50"
+              className="px-3 sm:px-4 py-2 rounded-xl bg-app-surface text-app border border-app text-xs sm:text-sm font-medium hover:bg-[#7b9acc]/10 disabled:opacity-50"
             >
               Quiz
             </button>
@@ -123,7 +157,7 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
             </button>
           </div>
         </form>
-        <p className="text-center text-[10px] text-black/40 mt-2 sm:mt-3 italic">
+        <p className="text-center text-[10px] text-app-muted mt-2 sm:mt-3 italic">
           AI still make mistakes always double check
         </p>
       </div>

@@ -1,1 +1,142 @@
 @import "tailwindcss";
+
+:root {
+  --app-bg: #FCF6F5;
+  --app-surface: #ffffff;
+  --app-text: 0, 0, 0;
+  --app-text-secondary-opacity: 0.6;
+  --app-text-muted-opacity: 0.4;
+  --app-border-subtle: rgba(123, 154, 204, 0.2);
+  --app-error-dot: #7b9acc;
+  --green-status: #16a34a;
+  --red-status: #dc2626;
+  --green-status-bg: #dcfce7;
+  --red-status-bg: #fee2e2;
+  --warning-bg: #fffbeb;
+  --warning-text: #92400e;
+  --warning-border: #fcd34d;
+}
+
+html.dark {
+  --app-bg: #1E1E24;
+  --app-surface: #2A2A32;
+  --app-text: 241, 241, 243;
+  --app-text-secondary-opacity: 0.65;
+  --app-text-muted-opacity: 0.4;
+  --app-border-subtle: rgba(123, 154, 204, 0.3);
+  --app-error-dot: #9BB8D8;
+  --green-status: #4ade80;
+  --red-status: #f87171;
+  --green-status-bg: rgba(22, 163, 74, 0.15);
+  --red-status-bg: rgba(220, 38, 38, 0.15);
+  --warning-bg: rgba(245, 158, 11, 0.15);
+  --warning-text: #fbbf24;
+  --warning-border: rgba(245, 158, 11, 0.3);
+}
+
+html {
+  transition: background-color 0.2s ease;
+}
+
+body {
+  margin: 0;
+  background-color: var(--app-bg);
+  color: rgb(var(--app-text));
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.bg-app {
+  background-color: var(--app-bg);
+}
+
+.bg-app-surface {
+  background-color: var(--app-surface);
+}
+
+.text-app {
+  color: rgb(var(--app-text));
+}
+
+.text-app-secondary {
+  color: rgba(var(--app-text), var(--app-text-secondary-opacity));
+}
+
+.text-app-muted {
+  color: rgba(var(--app-text), var(--app-text-muted-opacity));
+}
+
+.border-app {
+  border-color: var(--app-border-subtle);
+}
+
+.bg-green-status {
+  background-color: var(--green-status-bg);
+}
+
+.text-green-status {
+  color: var(--green-status);
+}
+
+.bg-red-status {
+  background-color: var(--red-status-bg);
+}
+
+.text-red-status {
+  color: var(--red-status);
+}
+
+.bg-warning {
+  background-color: var(--warning-bg);
+}
+
+.text-warning {
+  color: var(--warning-text);
+}
+
+.border-warning {
+  border-color: var(--warning-border);
+}
+
+/* ---- Scrollbar Theming (ERR-046) ----
+   Themed scrollbars for both light and dark modes so the thumb/track
+   match the app surface instead of falling back to the OS-default white. */
+
+* {
+  scrollbar-width: thin;
+}
+
+html {
+  scrollbar-color: rgba(123, 154, 204, 0.4) transparent;
+}
+
+html.dark {
+  scrollbar-color: rgba(155, 184, 216, 0.4) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(123, 154, 204, 0.4);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(123, 154, 204, 0.65);
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background-color: rgba(155, 184, 216, 0.35);
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(155, 184, 216, 0.55);
+}

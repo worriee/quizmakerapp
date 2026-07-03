@@ -15,6 +15,13 @@ if ("serviceWorker" in navigator) {
     });
 }
 
+const savedTheme = typeof window !== "undefined"
+  ? localStorage.getItem("quizmaker_theme")
+  : null;
+if (savedTheme === "dark") {
+  document.documentElement.classList.add("dark");
+}
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <App />

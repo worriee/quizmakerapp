@@ -18,12 +18,12 @@ const QuizInterface = ({ quizData, onAnswer, onExit }) => {
 
   if (!quizData || !text) {
     return (
-      <div className="flex flex-col items-center justify-center h-full max-w-3xl mx-auto w-full p-4 sm:p-6 text-center">
+      <div className="flex flex-col items-center justify-center h-full max-w-3xl mx-auto w-full p-4 sm:p-6 text-center text-app">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#7b9acc] mb-4"></div>
         <p className="text-lg font-bold text-[#7b9acc]">
           Preparing your quiz...
         </p>
-        <p className="text-sm text-black/60 mt-2">This won't take long.</p>
+        <p className="text-sm text-app-secondary mt-2">This won't take long.</p>
       </div>
     );
   }
@@ -31,10 +31,10 @@ const QuizInterface = ({ quizData, onAnswer, onExit }) => {
   return (
     <div className="flex flex-col h-full max-w-3xl mx-auto w-full p-3 sm:p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[#7b9acc]/20 pb-3 sm:pb-4 mb-4 sm:mb-8">
+      <div className="flex items-center justify-between border-b border-app pb-3 sm:pb-4 mb-4 sm:mb-8">
         <button
           onClick={onExit}
-          className="text-sm text-black/60 hover:text-black transition-colors flex items-center gap-1"
+          className="text-sm text-app-secondary hover:text-app transition-colors flex items-center gap-1"
         >
           ← Back to Chat
         </button>
@@ -60,7 +60,7 @@ const QuizInterface = ({ quizData, onAnswer, onExit }) => {
             className={`p-4 sm:p-6 rounded-2xl border-2 animate-in slide-in-from-top-4 duration-500 shadow-sm ${
               feedback.isCorrect
                 ? "bg-[#7b9acc] border-[#7b9acc] text-[#FCF6F5]"
-                : "bg-[#FCF6F5] border-[#7b9acc] text-black"
+                : "bg-app text-app border-[#7b9acc]"
             }`}
           >
             <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
@@ -83,7 +83,7 @@ const QuizInterface = ({ quizData, onAnswer, onExit }) => {
             <div className="inline-block px-2.5 sm:px-3 py-1 rounded-full bg-[#7b9acc]/10 text-[#7b9acc] text-[10px] font-bold uppercase tracking-widest">
               Current Question
             </div>
-            <h2 className="text-lg sm:text-3xl font-bold text-black leading-tight tracking-tight">
+            <h2 className="text-lg sm:text-3xl font-bold text-app leading-tight tracking-tight">
               {text}
             </h2>
           </div>
@@ -95,13 +95,13 @@ const QuizInterface = ({ quizData, onAnswer, onExit }) => {
               
               if (selectedOption === null) {
                 buttonClass +=
-                  "border-[#7b9acc]/20 bg-white hover:bg-[#7b9acc]/5 hover:border-[#7b9acc]/50 text-black";
+                  "border-app bg-app-surface hover:bg-[#7b9acc]/5 hover:border-[#7b9acc]/50 text-app";
               } else if (option === selectedOption) {
                 buttonClass += feedback?.isCorrect
                   ? "bg-[#7b9acc] border-[#7b9acc] text-[#FCF6F5] shadow-md scale-[1.02]"
-                  : "bg-[#FCF6F5] border-[#7b9acc] text-black shadow-sm";
+                  : "bg-app border-[#7b9acc] text-app shadow-sm";
               } else {
-                buttonClass += "border-[#7b9acc]/10 text-black/30 bg-white/50";
+                buttonClass += "border-[#7b9acc]/10 text-app-muted";
               }
 
               return (

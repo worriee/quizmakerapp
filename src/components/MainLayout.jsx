@@ -3,6 +3,8 @@ import pinIcon from "../assets/thumbtacks.png";
 import renameIcon from "../assets/edit.png";
 import deleteIcon from "../assets/delete.png";
 import logoutIcon from "../assets/logout.png";
+import lightIcon from "../assets/light.png";
+import darkIcon from "../assets/night-mode.png";
 
 import ModelSelector from "./ModelSelector";
 
@@ -24,6 +26,8 @@ const MainLayout = ({
   customModels = [],
   onSaveCustomModel,
   onDeleteCustomModel,
+  theme,
+  onToggleTheme,
 }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(
     typeof window !== "undefined" ? window.innerWidth >= 1024 : true,
@@ -126,7 +130,7 @@ const MainLayout = ({
         className={`group relative w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-200 cursor-pointer flex items-center justify-between ${
           isActive
             ? "bg-[#7b9acc] text-white font-bold"
-            : "text-black hover:bg-[#7b9acc]/10"
+            : "text-app hover:bg-[#7b9acc]/10"
         }`}
       >
         {isActive && (
@@ -141,7 +145,7 @@ const MainLayout = ({
             onKeyDown={(e) => handleKeyDown(e, session.id)}
             onBlur={(e) => submitRename(e, session.id)}
             autoFocus
-            className="flex-1 px-2 py-1 text-sm border border-[#7b9acc]/30 rounded-lg focus:outline-none              focus:ring-2 focus:ring-[#7b9acc] bg-[#FCF6F5] text-black z-20"
+            className="flex-1 px-2 py-1 text-sm border border-app rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7b9acc] bg-app-surface text-app z-20"
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
@@ -177,29 +181,29 @@ const MainLayout = ({
         {openMenuId === session.id && (
           <div
             ref={menuRef}
-            className="absolute right-0 top-full w-40 bg-[#FCF6F5] border border-[#7b9acc]/20 rounded-xl shadow-xl z-50 py-1.5 animate-in fade-in zoom-in-95 duration-100"
+            className="absolute right-0 top-full w-40 bg-app-surface border border-app rounded-xl shadow-xl z-50 py-1.5 animate-in fade-in zoom-in-95 duration-100"
           >
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onTogglePin(session.id, session.pinned);
-              }}
-              className="w-full text-left px-3 py-2 text-sm text-black/80 hover:bg-[#7b9acc]/10 hover:text-black flex items-center gap-3 transition-colors"
-            >
-              <img src={pinIcon} alt="Pin" className="w-4 h-4 opacity-70" />
-              {session.pinned ? "Unpin" : "Pin"}
-            </button>
-            <button
-              onClick={(e) => startRename(e, session)}
-              className="w-full text-left px-3 py-2 text-sm text-black/80 hover:bg-[#7b9acc]/10 hover:text-black flex items-center gap-3 transition-colors"
-            >
-              <img
-                src={renameIcon}
-                alt="Rename"
-                className="w-4 h-4 opacity-70"
-              />
-              Rename
-            </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTogglePin(session.id, session.pinned);
+                }}
+                className="w-full text-left px-3 py-2 text-sm text-app-secondary hover:bg-[#7b9acc]/10 hover:text-app flex items-center gap-3 transition-colors"
+              >
+                <img src={pinIcon} alt="Pin" className="w-4 h-4 opacity-70" />
+                {session.pinned ? "Unpin" : "Pin"}
+              </button>
+              <button
+                onClick={(e) => startRename(e, session)}
+                className="w-full text-left px-3 py-2 text-sm text-app-secondary hover:bg-[#7b9acc]/10 hover:text-app flex items-center gap-3 transition-colors"
+              >
+                <img
+                  src={renameIcon}
+                  alt="Rename"
+                  className="w-4 h-4 opacity-70"
+                />
+                Rename
+              </button>
             <div className="my-1 border-t border-[#7b9acc]/10" />
             <button
               onClick={(e) => handleDelete(e, session.id)}
@@ -219,7 +223,7 @@ const MainLayout = ({
   };
 
   return (
-    <div className="flex h-screen bg-[#FCF6F5] text-black overflow-hidden relative">
+    <div className="flex h-screen bg-app text-app overflow-hidden relative">
       {/* Mobile Overlay Backdrop */}
       {isSidebarOpen && (
         <div
@@ -230,7 +234,7 @@ const MainLayout = ({
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 bg-[#FCF6F5] border-r border-[#7b9acc]/20 transition-all duration-300 ease-in-out flex flex-col ${
+        className={`fixed inset-y-0 left-0 z-50 bg-app border-r border-app transition-all duration-300 ease-in-out flex flex-col ${
           isSidebarOpen ? "w-64 translate-x-0" : "w-64 -translate-x-full"
         } lg:relative lg:w-64 ${!isSidebarOpen ? "lg:hidden" : "lg:block"}`}
       >
@@ -245,12 +249,12 @@ const MainLayout = ({
           <div className="flex-1 overflow-y-auto space-y-6">
             {/* Pinned Sessions */}
             <div>
-              <p className="text-[10px] font-bold text-black/50 uppercase tracking-widest mb-2 px-2">
+              <p className="text-[10px] font-bold text-app-muted uppercase tracking-widest mb-2 px-2">
                 Pinned
               </p>
               <div className="space-y-1">
                 {sessions.filter((s) => s.pinned).length === 0 ? (
-                  <p className="text-xs text-black/40 italic px-2">
+                  <p className="text-xs text-app-muted italic px-2">
                     No pinned chats
                   </p>
                 ) : (
@@ -265,12 +269,12 @@ const MainLayout = ({
 
             {/* Recent Sessions */}
             <div>
-              <p className="text-[10px] font-bold text-black/50 uppercase tracking-widest mb-2 px-2">
+              <p className="text-[10px] font-bold text-app-muted uppercase tracking-widest mb-2 px-2">
                 Recent
               </p>
               <div className="space-y-1">
                 {sessions.filter((s) => !s.pinned).length === 0 ? (
-                  <p className="text-xs text-black/40 italic px-2">
+                  <p className="text-xs text-app-muted italic px-2">
                     No recent chats
                   </p>
                 ) : (
@@ -291,7 +295,7 @@ const MainLayout = ({
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex flex-wrap items-center gap-2 p-3 sm:p-4 border-b border-[#7b9acc]/20 bg-[#FCF6F5]">
+        <div className="flex flex-wrap items-center gap-2 p-3 sm:p-4 border-b border-app bg-app z-10 relative">
           {/* Left group: hamburger, TUON AI, version */}
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
@@ -301,7 +305,7 @@ const MainLayout = ({
             >
               <span className="text-lg sm:text-xl leading-none">☰</span>
             </button>
-            <span className="font-bold text-base sm:text-lg tracking-tight text-black whitespace-nowrap">
+            <span className="font-bold text-base sm:text-lg tracking-tight text-app whitespace-nowrap">
               TUON AI
             </span>
             <button
@@ -326,21 +330,33 @@ const MainLayout = ({
             />
           </div>
 
-          {/* Right group: save status, profile */}
+          {/* Right group: theme toggle, save status, profile */}
           <div className="flex items-center gap-2 sm:gap-3 ml-auto">
+            <button
+              onClick={onToggleTheme}
+              className="p-1.5 rounded-full hover:bg-[#7b9acc]/10 transition-all text-app/70 hover:text-app"
+              aria-label="Toggle theme"
+            >
+      {theme === "dark" ? (
+        <img src={lightIcon} alt="Light mode" className="w-4 h-4 sm:w-5 sm:h-5" />
+      ) : (
+        <img src={darkIcon} alt="Dark mode" className="w-4 h-4 sm:w-5 sm:h-5" />
+      )}
+            </button>
+
             {saveStatus !== "synced" && (
               <div
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium transition-all ${
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium transition-all border border-app ${
                   saveStatus === "saving"
-                    ? "bg-[#FCF6F5] text-[#7b9acc] border border-[#7b9acc]/30"
-                    : "bg-[#FCF6F5] text-[#7b9acc] border border-[#7b9acc]/30"
+                    ? "bg-app text-app-secondary"
+                    : "bg-app text-app-secondary"
                 }`}
               >
                 <div
                   className={`w-1.5 h-1.5 rounded-full ${
                     saveStatus === "saving"
                       ? "bg-[#7b9acc] animate-pulse"
-                      : "bg-[#7b9acc]"
+                      : "bg-[var(--app-error-dot)]"
                   }`}
                 />
                 <span className="hidden sm:inline">
@@ -349,7 +365,7 @@ const MainLayout = ({
                 {saveStatus === "error" && (
                   <button
                     onClick={onRetrySave}
-                    className="sm:ml-0.5 hover:underline font-bold"
+                    className="sm:ml-0.5 hover:underline font-bold text-app"
                   >
                     Retry
                   </button>
@@ -374,17 +390,17 @@ const MainLayout = ({
               {isProfileOpen && (
                 <div
                   ref={profileRef}
-                  className="absolute right-0 top-full mt-2 w-64 bg-[#FCF6F5] border border-[#7b9acc]/20 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2"
+                  className="absolute right-0 top-full mt-2 w-64 bg-app-surface border border-app rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2"
                 >
-                  <div className="p-5">
-                    <div className="flex justify-between items-center mb-5">
-                      <h3 className="text-[10px] font-black text-black/50 uppercase tracking-widest">
-                        User Profile
-                      </h3>
-                      <button
-                        onClick={() => setIsProfileOpen(false)}
-                        className="p-1 hover:bg-[#7b9acc]/10 rounded-full transition-colors text-black hover:text-[#7b9acc]"
-                      >
+                   <div className="p-5">
+                     <div className="flex justify-between items-center mb-5">
+                       <h3 className="text-[10px] font-black text-app-muted uppercase tracking-widest">
+                         User Profile
+                       </h3>
+                       <button
+                         onClick={() => setIsProfileOpen(false)}
+                         className="p-1 hover:bg-[#7b9acc]/10 rounded-full transition-colors text-app hover:text-[#7b9acc]"
+                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           fill="none"
@@ -403,16 +419,16 @@ const MainLayout = ({
                     </div>
                     <div className="space-y-3">
                       <div className="text-sm">
-                        <p className="text-black/60 text-[10px] uppercase font-bold tracking-wider mb-1">
-                          Email Address
+                        <p className="text-app-muted text-[10px] uppercase font-bold tracking-wider mb-1">
+                          User Profile
                         </p>
-                        <p className="text-black font-semibold truncate">
+                        <p className="text-app font-semibold truncate">
                           {user?.email || "Not available"}
                         </p>
                       </div>
                       <button
                         onClick={onLogout}
-                        className="w-full mt-6 flex items-center justify-center gap-2 px-3 py-2.5 bg-[#FCF6F5] text-black rounded-xl hover:bg-[#7b9acc]/10 transition-all text-sm font-bold border border-[#7b9acc]/30"
+                        className="w-full mt-6 flex items-center justify-center gap-2 px-3 py-2.5 bg-app-surface text-app rounded-xl hover:bg-[#7b9acc]/10 transition-all text-sm font-bold border border-app"
                       >
                         <img
                           src={logoutIcon}
@@ -429,7 +445,7 @@ const MainLayout = ({
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden">{children}</div>
+        <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
 
         {isChangelogOpen && changelog && (
           <div
@@ -437,17 +453,19 @@ const MainLayout = ({
             onClick={handleCloseChangelog}
           >
             <div
-              className="bg-[#FCF6F5] border border-[#7b9acc]/20 rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
+              className="bg-app-surface border border-app rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="sticky top-0 bg-[#FCF6F5] border-b border-[#7b9acc]/10 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+              <div className="sticky top-0 bg-app-surface border-b border-app px-6 py-4 flex items-center justify-between rounded-t-2xl">
                 <div>
-                  <h2 className="font-bold text-lg text-black">What's New</h2>
-                  <p className="text-xs text-black/50">TUON AI Release Notes</p>
+                  <h2 className="font-bold text-lg text-app">What's New</h2>
+                  <p className="text-xs text-app-muted">
+                    TUON AI Release Notes
+                  </p>
                 </div>
                 <button
                   onClick={handleCloseChangelog}
-                  className="p-1.5 hover:bg-[#7b9acc]/10 rounded-full transition-all text-black/60 hover:text-black"
+                  className="p-1.5 hover:bg-[#7b9acc]/10 rounded-full transition-all text-app/60 hover:text-app"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -467,7 +485,7 @@ const MainLayout = ({
                       <span className="text-sm font-bold text-[#7b9acc] border border-[#7b9acc]/30 bg-[#7b9acc]/10 rounded-full px-2.5 py-0.5">
                         v{release.version}
                       </span>
-                      <span className="text-xs text-black/40">
+                      <span className="text-xs text-app-muted">
                         {release.date}
                       </span>
                     </div>
@@ -475,7 +493,7 @@ const MainLayout = ({
                       {release.notes.map((note, i) => (
                         <li
                           key={i}
-                          className="flex items-start gap-2 text-sm text-black/80"
+                          className="flex items-start gap-2 text-sm text-app-secondary"
                         >
                           <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#7b9acc]/40 shrink-0" />
                           {note}
@@ -487,7 +505,7 @@ const MainLayout = ({
               </div>
 
               <div className="border-t border-[#7b9acc]/10 px-6 py-3">
-                <p className="text-[10px] text-black/40 text-center">
+                <p className="text-[10px] text-app-muted text-center">
                   Thank you for using TUON AI. -Jul
                 </p>
               </div>
@@ -497,9 +515,9 @@ const MainLayout = ({
 
         {changelogLoading && (
           <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
-            <div className="bg-[#FCF6F5] rounded-2xl shadow-2xl px-8 py-6 flex items-center gap-3">
+            <div className="bg-app-surface rounded-2xl shadow-2xl px-8 py-6 flex items-center gap-3">
               <div className="w-4 h-4 border-2 border-[#7b9acc] border-t-transparent rounded-full animate-spin" />
-              <span className="text-sm text-black/70">
+              <span className="text-sm text-app-secondary">
                 Loading changelog...
               </span>
             </div>

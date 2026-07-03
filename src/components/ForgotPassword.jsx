@@ -35,43 +35,43 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-[#FCF6F5] p-4">
-      <div className="bg-[#FCF6F5] p-8 rounded-2xl shadow-xl max-w-md w-full border border-[#7b9acc]/30">
+    <div className="flex items-center justify-center min-h-screen bg-app p-4">
+      <div className="bg-app-surface p-8 rounded-2xl shadow-xl max-w-md w-full border border-app">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-extrabold text-[#7b9acc] mb-1">TUON AI</h1>
-          <h2 className="text-xl font-bold text-black">Reset Password</h2>
+          <h2 className="text-xl font-bold text-app">Reset Password</h2>
         </div>
 
         {sent ? (
           <div className="text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="w-16 h-16 bg-green-status rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-green-status" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <p className="text-black/60 mb-2">If an account exists with this email, a reset link has been sent.</p>
-            <p className="text-sm text-black/40">Check your inbox and follow the link to reset your password.</p>
+            <p className="text-app-secondary mb-2">If an account exists with this email, a reset link has been sent.</p>
+            <p className="text-sm text-app-muted">Check your inbox and follow the link to reset your password.</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <p className="text-sm text-black/60">
+            <p className="text-sm text-app-secondary">
               Enter your email address and we'll send you a link to reset your password.
             </p>
 
             <div>
-              <label className="block text-sm font-medium text-black mb-1">Email Address</label>
+              <label className="block text-sm font-medium text-app mb-1">Email Address</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border border-[#7b9acc]/30 focus:ring-2 focus:ring-[#7b9acc] outline-none transition-all"
+                className="w-full px-4 py-2 rounded-lg border border-app bg-app-surface focus:ring-2 focus:ring-[#7b9acc] outline-none transition-all text-app"
                 placeholder="youremail@example.com"
                 required
               />
             </div>
 
             {error && (
-              <div className="p-3 text-sm text-black bg-[#FCF6F5] border border-[#7b9acc]/30 rounded-lg">
+              <div className="p-3 text-sm text-app bg-app-surface border border-app rounded-lg">
                 {error}
               </div>
             )}
@@ -87,7 +87,7 @@ const ForgotPassword = () => {
         )}
 
         <div className="mt-6 text-center">
-          <a href="/" className="text-sm text-black/60 hover:underline">
+          <a href="/" className="text-sm text-app-secondary hover:underline">
             Back to TUON AI
           </a>
         </div>

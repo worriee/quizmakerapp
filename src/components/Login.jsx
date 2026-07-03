@@ -84,35 +84,35 @@ const Login = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-[#FCF6F5] p-4">
-      <div className="bg-[#FCF6F5] p-8 rounded-2xl shadow-xl max-w-md w-full border border-[#7b9acc]/30">
+    <div className="flex items-center justify-center min-h-screen bg-app p-4">
+      <div className="bg-app-surface p-8 rounded-2xl shadow-xl max-w-md w-full border border-app">
         {/* Header Section */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-extrabold text-[#7b9acc] mb-1">TUON AI</h1>
           <p className="text-sm text-[#7b9acc] mb-6 italic">To Understand Own Navigation</p>
-          <h2 className="text-xl font-bold text-black">{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
+          <h2 className="text-xl font-bold text-app">{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
         </div>
 
         {/* Auth Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-black mb-1">Email Address</label>
+            <label className="block text-sm font-medium text-app mb-1">Email Address</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 rounded-lg border border-[#7b9acc]/30 focus:ring-2 focus:ring-[#7b9acc] outline-none transition-all"
+              className="w-full px-4 py-2 rounded-lg border border-app bg-app-surface focus:ring-2 focus:ring-[#7b9acc] outline-none transition-all text-app"
               placeholder="youremail@example.com"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-black mb-1">Password</label>
+            <label className="block text-sm font-medium text-app mb-1">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 rounded-lg border border-[#7b9acc]/30 focus:ring-2 focus:ring-[#7b9acc] outline-none transition-all"
+              className="w-full px-4 py-2 rounded-lg border border-app bg-app-surface focus:ring-2 focus:ring-[#7b9acc] outline-none transition-all text-app"
               placeholder="••••••••"
               required
               minLength={8}
@@ -130,11 +130,11 @@ const Login = () => {
           {isSignUp && password.length > 0 && (
             <div className="space-y-1">
               {passwordChecks.map((check) => (
-                <div key={check.label} className="flex items-center gap-2 text-[11px]">
-                  <span className={check.met ? 'text-green-500' : 'text-black/30'}>
-                    {check.met ? '✓' : '○'}
-                  </span>
-                  <span className={check.met ? 'text-green-600' : 'text-black/40'}>
+                  <div key={check.label} className="flex items-center gap-2 text-[11px]">
+                    <span className={check.met ? 'text-green-status' : 'text-app-muted'}>
+                      {check.met ? '✓' : '○'}
+                    </span>
+                    <span className={check.met ? 'text-green-status' : 'text-app-secondary'}>
                     {check.label}
                   </span>
                 </div>
@@ -144,7 +144,7 @@ const Login = () => {
 
           {/* Error Notification */}
           {error && (
-            <div className="p-3 text-sm text-black bg-[#FCF6F5] border border-[#7b9acc]/30 rounded-lg">
+            <div className="p-3 text-sm text-app bg-app-surface border border-app rounded-lg">
               {error}
             </div>
           )}
@@ -160,12 +160,12 @@ const Login = () => {
 
         {/* Toggle between Sign In and Sign Up */}
         <div className="mt-6 text-center">
-          <p className="text-sm text-black">
+          <p className="text-sm text-app">
             {isSignUp ? "Already have an account?" : "Don't have an account?"}{' '}
             <button
               type="button"
               onClick={() => setIsSignUp(!isSignUp)}
-              className="text-black font-semibold hover:underline"
+              className="text-app font-semibold hover:underline"
             >
               {isSignUp ? 'Sign In' : 'Sign Up'}
             </button>

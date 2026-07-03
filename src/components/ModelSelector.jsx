@@ -41,7 +41,7 @@ const ModelSelector = ({ selectedModel, setSelectedModel, customModels = [], onS
     <div ref={dropdownRef} className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#7b9acc]/30 bg-white/50 hover:bg-white transition-all text-xs font-medium text-black shadow-sm group"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-app bg-app-surface/80 hover:bg-app-surface transition-all text-xs font-medium text-app shadow-sm group"
       >
         <span className="w-2 h-2 rounded-full bg-[#7b9acc] group-hover:scale-125 transition-transform" />
         <span>{currentModel.name}</span>
@@ -58,9 +58,9 @@ const ModelSelector = ({ selectedModel, setSelectedModel, customModels = [], onS
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 sm:w-64 bg-[#FCF6F5] border border-[#7b9acc]/20 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 sm:w-64 bg-app-surface border border-app rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
           <div className="p-2 max-h-80 overflow-y-auto">
-            <p className="px-3 py-2 text-[9px] font-black text-black/40 uppercase tracking-widest">Built-in Models</p>
+            <p className="px-3 py-2 text-[9px] font-black text-app-muted uppercase tracking-widest">Built-in Models</p>
             <div className="space-y-1">
               {MODELS.map((model) => (
                 <button
@@ -72,7 +72,7 @@ const ModelSelector = ({ selectedModel, setSelectedModel, customModels = [], onS
                   className={`w-full text-left px-3 py-2 rounded-xl text-xs transition-all flex items-center justify-between ${
                     selectedModel === model.id 
                       ? 'bg-[#7b9acc] text-white font-bold' 
-                      : 'text-black hover:bg-[#7b9acc]/10'
+                      : 'text-app hover:bg-[#7b9acc]/10'
                   }`}
                 >
                   <span>{model.name}</span>
@@ -87,8 +87,8 @@ const ModelSelector = ({ selectedModel, setSelectedModel, customModels = [], onS
 
             {customModels.length > 0 && (
               <>
-                <div className="my-2 border-t border-[#7b9acc]/10" />
-                <p className="px-3 py-2 text-[9px] font-black text-black/40 uppercase tracking-widest">Custom LLMs</p>
+                <div className="my-2 border-t border-app" />
+                <p className="px-3 py-2 text-[9px] font-black text-app-muted uppercase tracking-widest">Custom LLMs</p>
                 <div className="space-y-1">
                   {customModels.map((model) => (
                     <div key={model.id} className="flex items-center gap-1">
@@ -100,7 +100,7 @@ const ModelSelector = ({ selectedModel, setSelectedModel, customModels = [], onS
                         className={`flex-1 text-left px-3 py-2 rounded-xl text-xs transition-all flex items-center justify-between ${
                           selectedModel === model.id 
                             ? 'bg-[#7b9acc] text-white font-bold' 
-                            : 'text-black hover:bg-[#7b9acc]/10'
+                            : 'text-app hover:bg-[#7b9acc]/10'
                         }`}
                       >
                         <span>{model.name}</span>
@@ -117,7 +117,7 @@ const ModelSelector = ({ selectedModel, setSelectedModel, customModels = [], onS
                             setSelectedModel(MODELS[0].id);
                           }
                         }}
-                        className="p-2 text-black/30 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                        className="p-2 text-app-muted hover:text-red-400 hover:bg-red-900/30 rounded-lg transition-all"
                         title="Remove"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
@@ -130,7 +130,7 @@ const ModelSelector = ({ selectedModel, setSelectedModel, customModels = [], onS
               </>
             )}
 
-            <div className="my-2 border-t border-[#7b9acc]/10" />
+            <div className="my-2 border-t border-app" />
             <button
               onClick={() => {
                 setIsOpen(false);

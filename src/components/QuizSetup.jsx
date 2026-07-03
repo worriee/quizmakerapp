@@ -8,12 +8,12 @@ const QuizSetup = ({ onStart, onExit }) => {
 
   return (
     <div className="flex flex-col items-center justify-center h-full p-3 sm:p-6 animate-in fade-in zoom-in duration-300">
-      <div className="bg-white border border-[#7b9acc]/20 rounded-3xl p-5 sm:p-8 max-w-md w-full shadow-xl space-y-6 sm:space-y-8">
+      <div className="bg-app-surface border border-app rounded-3xl p-5 sm:p-8 max-w-md w-full shadow-xl space-y-6 sm:space-y-8">
         <div className="text-center space-y-2">
           <h2 className="text-2xl sm:text-3xl font-sans text-[#7b9acc]">
             Quiz Configuration
           </h2>
-          <p className="text-black/50 text-sm">
+          <p className="text-app-muted text-sm">
             Customize your challenge to master the topic
           </p>
         </div>
@@ -22,7 +22,7 @@ const QuizSetup = ({ onStart, onExit }) => {
           {/* Item Count */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <label className="text-sm font-bold text-black/70 uppercase tracking-wider">
+              <label className="text-sm font-bold text-app-secondary uppercase tracking-wider">
                 Number of Questions
               </label>
               <span className="text-[#7b9acc] font-bold text-lg">
@@ -37,7 +37,7 @@ const QuizSetup = ({ onStart, onExit }) => {
               onChange={(e) => setItemCount(parseInt(e.target.value))}
               className="w-full h-2 bg-[#7b9acc]/20 rounded-lg appearance-none cursor-pointer accent-[#7b9acc]"
             />
-            <div className="flex justify-between text-[10px] text-black/40 font-medium">
+            <div className="flex justify-between text-[10px] text-app-muted font-medium">
               <span>3 Questions</span>
               <span>20 Questions</span>
             </div>
@@ -45,7 +45,7 @@ const QuizSetup = ({ onStart, onExit }) => {
 
           {/* Difficulty */}
           <div className="space-y-3">
-            <label className="text-sm font-bold text-black/70 uppercase tracking-wider block">
+            <label className="text-sm font-bold text-app-secondary uppercase tracking-wider block">
               Difficulty Level
             </label>
             <div className="grid grid-cols-3 gap-3">
@@ -56,7 +56,7 @@ const QuizSetup = ({ onStart, onExit }) => {
                   className={`py-2 px-3 rounded-xl text-sm font-medium transition-all border ${
                     difficulty === level
                       ? "bg-[#7b9acc] text-white border-[#7b9acc] shadow-md"
-                      : "bg-white text-black border-[#7b9acc]/20 hover:border-[#7b9acc]/40"
+                      : "bg-app-surface text-app border-app hover:border-[#7b9acc]/40"
                   }`}
                 >
                   {level}
@@ -69,7 +69,7 @@ const QuizSetup = ({ onStart, onExit }) => {
         <div className="flex gap-3 pt-4">
           <button
             onClick={onExit}
-            className="flex-1 py-3 rounded-xl bg-[#FCF6F5] text-black border border-[#7b9acc]/30 text-sm font-bold hover:bg-[#7b9acc]/10 transition-all"
+            className="flex-1 py-3 rounded-xl bg-app-surface text-app border border-app text-sm font-bold hover:bg-[#7b9acc]/10 transition-all"
           >
             Cancel
           </button>
