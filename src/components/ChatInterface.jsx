@@ -63,8 +63,8 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
 
   return (
     <div className="flex flex-col h-full min-h-0 text-app">
-       {/* Messages Area */}
-       <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-5 sm:space-y-6">
+      {/* Messages Area */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-5 sm:space-y-6">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-6 sm:p-8">
             <div className="flex items-center gap-3">
@@ -158,7 +158,7 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
           </div>
         </form>
         <p className="text-center text-[10px] text-app-muted mt-2 sm:mt-3 italic">
-          AI still make mistakes always double check
+          AI still make mistakes always double check.
         </p>
       </div>
     </div>

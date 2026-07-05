@@ -234,7 +234,7 @@ const MainLayout = ({
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 bg-app border-r border-app transition-all duration-300 ease-in-out flex flex-col ${
+        className={`fixed inset-y-0 left-0 z-50 bg-app border-r border-app transition-transform duration-300 ease-in-out flex flex-col ${
           isSidebarOpen ? "w-64 translate-x-0" : "w-64 -translate-x-full"
         } lg:relative lg:w-64 ${!isSidebarOpen ? "lg:hidden" : "lg:block"}`}
       >
@@ -341,7 +341,7 @@ const MainLayout = ({
                 <img
                   src={lightIcon}
                   alt="Light mode"
-                  className="w-4 h-4 sm:w-5 sm:h-5"
+                  className="w-4 h-4 sm:w-5 sm:h-5 brightness-0 invert"
                 />
               ) : (
                 <img

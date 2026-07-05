@@ -9,17 +9,11 @@ import VerifyEmail from "./components/VerifyEmail";
 import ForgotPassword from "./components/ForgotPassword";
 import ResetPassword from "./components/ResetPassword";
 import { parseAIResponse } from "./utils/aiParser";
-import {
-  loadCustomModels,
-  saveCustomModel,
-  deleteCustomModel,
-} from "./utils/customModelStorage";
+import { useTheme } from "./hooks/useTheme";
+import { useCustomModels } from "./hooks/useCustomModels";
+import { useSessions } from "./hooks/useSessions";
 
 const API_BASE_URL = "/api";
-const SESSION_STORAGE_KEY = "quizmaker_current_session_id";
-const SESSIONS_CACHE_KEY = "quizmaker_sessions_cache";
-const MODEL_STORAGE_KEY = "quizmaker_selected_model";
-const DEFAULT_MODEL = "gemini-3.1-flash-lite";
 
 function App() {
   // Simple path-based routing for auth pages (no React Router needed)
@@ -40,19 +34,6 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [history, setHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [sessions, setSessions] = useState(() => {
-    const cached = localStorage.getItem(SESSIONS_CACHE_KEY);
-    if (cached) {
-      try {
-        return JSON.parse(cached);
-      } catch (e) {
-        console.error("Failed to parse sessions cache:", e);
-        return [];
-      }
-    }
-    return [];
-  });
-  const [currentSessionId, setCurrentSessionId] = useState(null);
   const [abortController, setAbortController] = useState(null);
   const [view, setView] = useState("chat");
   const [quizData, setQuizData] = useState(null);
@@ -62,90 +43,59 @@ function App() {
     difficulty: "Normal",
   });
   const [wrongAnswers, setWrongAnswers] = useState([]);
-  const [saveStatus, setSaveStatus] = useState("synced");
-  const [selectedModel, setSelectedModel] = useState(() => {
-    const saved = localStorage.getItem(MODEL_STORAGE_KEY);
-    return saved || DEFAULT_MODEL;
-  });
-  const [customModels, setCustomModels] = useState(() => loadCustomModels());
-  const [theme, setTheme] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("quizmaker_theme") || "light";
-    }
-    return "light";
-  });
+  const { theme, toggleTheme } = useTheme();
+  const {
+    selectedModel,
+    setSelectedModel,
+    customModels,
+    addCustomModel,
+    deleteCustomModel,
+    getCustomModelConfig,
+  } = useCustomModels();
+  const {
+    sessions,
+    currentSessionId,
+    setCurrentSessionId,
+    saveStatus,
+    setSaveStatus,
+    fetchSessions,
+    saveSessionToDb,
+    loadSession,
+    deleteSession,
+    renameSession,
+    togglePin,
+    reset: resetSessions,
+  } = useSessions();
 
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-    localStorage.setItem("quizmaker_theme", theme);
-  }, [theme]);
+  const handleLoadSession = useCallback(
+    async (sessionId) => {
+      const session = await loadSession(sessionId);
+      if (!session) return;
 
-  const toggleTheme = useCallback(() => {
-    setTheme((prev) => (prev === "light" ? "dark" : "light"));
-  }, []);
+      const historyData = session.history || [];
+      setHistory(historyData);
+      setView("chat");
 
-  const handleSetSelectedModel = useCallback((model) => {
-    setSelectedModel(model);
-    localStorage.setItem(MODEL_STORAGE_KEY, model);
-  }, []);
+      const loadedMessages = historyData.map((item) => {
+        if (item.role === "model") {
+          const { thought, final, structured } = parseAIResponse(
+            item.parts[0].text,
+          );
+          return {
+            role: "model",
+            raw: item.parts[0].text,
+            text: structured.text || final,
+            thought: thought,
+            ...structured,
+          };
+        }
+        return { role: "user", text: item.parts[0].text, type: "text" };
+      });
 
-  const handleSaveCustomModel = useCallback((modelConfig) => {
-    const savedModel = saveCustomModel(modelConfig);
-    setCustomModels(loadCustomModels());
-    localStorage.setItem(MODEL_STORAGE_KEY, savedModel.id);
-  }, []);
-
-  const handleDeleteCustomModel = useCallback((modelId) => {
-    deleteCustomModel(modelId);
-    setCustomModels(loadCustomModels());
-  }, []);
-
-  const getCustomModelConfig = useCallback(
-    (modelId) => {
-      return customModels.find((m) => m.id === modelId) || null;
+      setMessages(loadedMessages);
     },
-    [customModels],
+    [loadSession],
   );
-
-  const updateCurrentSessionId = useCallback((id) => {
-    setCurrentSessionId(id);
-    if (id) {
-      localStorage.setItem(SESSION_STORAGE_KEY, id);
-    } else {
-      localStorage.removeItem(SESSION_STORAGE_KEY);
-    }
-  }, []);
-
-  const fetchSessions = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/sessions`, {
-        method: "GET",
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          setSessions([]);
-          localStorage.removeItem(SESSIONS_CACHE_KEY);
-          return;
-        }
-        throw new Error(`Failed to fetch sessions: ${response.status}`);
-      }
-
-      const { sessions } = await response.json();
-      const sortedData = (sessions || []).sort((a, b) => {
-        if (a.pinned !== b.pinned) {
-          return b.pinned ? 1 : -1;
-        }
-        return new Date(b.created_at) - new Date(a.created_at);
-      });
-
-      setSessions(sortedData);
-      localStorage.setItem(SESSIONS_CACHE_KEY, JSON.stringify(sortedData));
-    } catch (error) {
-      console.error("Error fetching sessions:", error);
-    }
-  }, []);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -156,60 +106,13 @@ function App() {
     } catch (e) {
       console.error("Logout error:", e);
     } finally {
-      localStorage.removeItem(SESSION_STORAGE_KEY);
+      resetSessions();
       setUser(null);
-      setSessions([]);
-      updateCurrentSessionId(null);
       setMessages([]);
       setHistory([]);
       setBootStatus("UNAUTHENTICATED");
     }
-  }, [updateCurrentSessionId]);
-
-  const saveSessionToDb = useCallback(
-    async (updatedHistory, topic, sessionId) => {
-      if (!user) {
-        return;
-      }
-
-      setSaveStatus("saving");
-      try {
-        const targetId = sessionId || currentSessionId;
-        if (targetId) {
-          const response = await fetch(
-            `${API_BASE_URL}/session/${targetId}/update`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({ history: updatedHistory, topic }),
-            },
-          );
-          if (!response.ok) throw new Error("Failed to update session");
-          await fetchSessions();
-        } else {
-          const response = await fetch(`${API_BASE_URL}/session/create`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({
-              topic: topic || "New Chat",
-              history: updatedHistory,
-            }),
-          });
-          if (!response.ok) throw new Error("Failed to create session");
-          const { session } = await response.json();
-          updateCurrentSessionId(session.id);
-          await fetchSessions();
-        }
-        setSaveStatus("synced");
-      } catch (error) {
-        console.error("Error saving session:", error);
-        setSaveStatus("error");
-      }
-    },
-    [user, currentSessionId, fetchSessions, updateCurrentSessionId],
-  );
+  }, [resetSessions]);
 
   const handleStartQuiz = useCallback(
     async (
@@ -382,7 +285,7 @@ function App() {
             if (!response.ok) throw new Error("Failed to create session");
             const { session } = await response.json();
             sessionId = session.id;
-            updateCurrentSessionId(sessionId);
+            setCurrentSessionId(sessionId);
             await fetchSessions();
           } catch (error) {
             console.error("Error creating initial session:", error);
@@ -499,7 +402,7 @@ function App() {
       currentSessionId,
       saveSessionToDb,
       fetchSessions,
-      updateCurrentSessionId,
+      setCurrentSessionId,
       selectedModel,
       handleStartQuiz,
       getCustomModelConfig,
@@ -517,9 +420,14 @@ function App() {
   const handleNewChat = useCallback(() => {
     setMessages([]);
     setHistory([]);
-    updateCurrentSessionId(null);
+    setCurrentSessionId(null);
     setView("chat");
-  }, [updateCurrentSessionId]);
+  }, [setCurrentSessionId]);
+
+  const handleDeleteSession = useCallback(
+    (sessionId) => deleteSession(sessionId, handleNewChat),
+    [deleteSession, handleNewChat],
+  );
 
   const handleResetToChat = useCallback(() => {
     setView("chat");
@@ -527,116 +435,6 @@ function App() {
     setQuizScore(0);
     setQuizParams({ itemCount: 5, difficulty: "Normal" });
     setWrongAnswers([]);
-  }, []);
-
-  const handleLoadSession = useCallback(
-    async (sessionId) => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/session/${sessionId}`, {
-          method: "GET",
-          credentials: "include",
-        });
-        if (!response.ok) throw new Error("Failed to load session");
-
-        const { session } = await response.json();
-
-        updateCurrentSessionId(sessionId);
-        const historyData = session.history || [];
-        setHistory(historyData);
-        setView("chat");
-
-        const loadedMessages = historyData.map((item) => {
-          if (item.role === "model") {
-            const { thought, final, structured } = parseAIResponse(
-              item.parts[0].text,
-            );
-            return {
-              role: "model",
-              raw: item.parts[0].text,
-              text: structured.text || final,
-              thought: thought,
-              ...structured,
-            };
-          }
-          return { role: "user", text: item.parts[0].text, type: "text" };
-        });
-
-        setMessages(loadedMessages);
-      } catch (error) {
-        console.error("Error loading session:", error);
-      }
-    },
-    [updateCurrentSessionId],
-  );
-
-  const handleDeleteSession = useCallback(
-    async (sessionId) => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/session/${sessionId}`, {
-          method: "DELETE",
-          credentials: "include",
-        });
-        if (!response.ok) throw new Error("Failed to delete session");
-
-        if (currentSessionId === sessionId) {
-          handleNewChat();
-        }
-
-        setSessions((prev) => {
-          const filtered = prev.filter((s) => s.id !== sessionId);
-          localStorage.setItem(SESSIONS_CACHE_KEY, JSON.stringify(filtered));
-          return filtered;
-        });
-      } catch (error) {
-        console.error("Error deleting session:", error);
-      }
-    },
-    [currentSessionId, handleNewChat],
-  );
-
-  const handleRenameSession = useCallback(async (sessionId, newTitle) => {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/session/${sessionId}/rename`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ topic: newTitle }),
-        },
-      );
-      if (!response.ok) throw new Error("Failed to rename session");
-
-      setSessions((prev) => {
-        const updated = prev.map((s) =>
-          s.id === sessionId ? { ...s, topic: newTitle } : s,
-        );
-        localStorage.setItem(SESSIONS_CACHE_KEY, JSON.stringify(updated));
-        return updated;
-      });
-    } catch (error) {
-      console.error("Error renaming session:", error);
-    }
-  }, []);
-
-  const handleTogglePin = useCallback(async (sessionId, currentPinStatus) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/session/${sessionId}/pin`, {
-        method: "POST",
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to toggle pin");
-
-      setSessions((prev) => {
-        const updated = prev.map((s) =>
-          s.id === sessionId ? { ...s, pinned: !currentPinStatus } : s,
-        );
-        localStorage.setItem(SESSIONS_CACHE_KEY, JSON.stringify(updated));
-        return updated;
-      });
-    } catch (error) {
-      console.error("Error toggling pin:", error);
-    }
   }, []);
 
   const handleQuizAnswer = useCallback(
@@ -763,7 +561,9 @@ function App() {
             ),
           ),
           (async () => {
-            const savedSessionId = localStorage.getItem(SESSION_STORAGE_KEY);
+            const savedSessionId = localStorage.getItem(
+              "quizmaker_current_session_id",
+            );
             if (savedSessionId) {
               try {
                 await withTimeout(
@@ -834,8 +634,8 @@ function App() {
           onLoadSession={handleLoadSession}
           currentSessionId={currentSessionId}
           onDeleteSession={handleDeleteSession}
-          onRenameSession={handleRenameSession}
-          onTogglePin={handleTogglePin}
+          onRenameSession={renameSession}
+          onTogglePin={togglePin}
           saveStatus={saveStatus}
           onRetrySave={() => {
             const currentTopic =
@@ -843,10 +643,10 @@ function App() {
             saveSessionToDb(history, currentTopic, currentSessionId);
           }}
           selectedModel={selectedModel}
-          setSelectedModel={handleSetSelectedModel}
+          setSelectedModel={setSelectedModel}
           customModels={customModels}
-          onSaveCustomModel={handleSaveCustomModel}
-          onDeleteCustomModel={handleDeleteCustomModel}
+          onSaveCustomModel={addCustomModel}
+          onDeleteCustomModel={deleteCustomModel}
           theme={theme}
           onToggleTheme={toggleTheme}
         >
