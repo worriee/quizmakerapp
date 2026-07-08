@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { parseAIResponse } from "../utils/aiParser";
+import { parseAIResponse, generateTitle } from "../utils/aiParser";
 
 const API_BASE_URL = "/api";
 
@@ -150,17 +150,25 @@ export function useChat({
         setAbortController(null);
       }
     },
-      [
-        history,
-        sessions,
-        currentSessionId,
-        saveSessionToDb,
-        selectedModel,
-        getCustomModelConfig,
-        setSaveStatus,
-        quizParams,
-      ],
-    );
+    [
+      history,
+      sessions,
+      currentSessionId,
+      saveSessionToDb,
+      selectedModel,
+      getCustomModelConfig,
+      setSaveStatus,
+      quizParams,
+    ],
+  );
+
+  const getTopic = useCallback(
+    (message, sessionId) => {
+      if (!sessionId) return generateTitle(message);
+      return sessions.find((s) => s.id === sessionId)?.topic || "Chat";
+    },
+    [sessions],
+  );
 
   const sendMessage = useCallback(
     async (text) => {
@@ -224,7 +232,7 @@ export function useChat({
         const data = await response.json();
         const rawResponse = data.raw || "";
 
-        const { title, thought, final, fallbackTitle, structured } =
+        const { thought, final, structured } =
           parseAIResponse(rawResponse);
         const displayText = structured.text || final;
 
@@ -236,11 +244,7 @@ export function useChat({
           ];
           setHistory(updatedHistory);
 
-          const topic = !currentSessionId
-            ? title ||
-              fallbackTitle ||
-              (text.length > 30 ? text.substring(0, 30) + "..." : text)
-            : sessions.find((s) => s.id === currentSessionId)?.topic || "Chat";
+          const topic = getTopic(text, sessionId);
 
           saveSessionToDb(updatedHistory, topic, sessionId).catch(() => {
             setSaveStatus("error");
@@ -270,11 +274,7 @@ export function useChat({
         ];
         setHistory(updatedHistory);
 
-        const topic = !currentSessionId
-          ? title ||
-            fallbackTitle ||
-            (text.length > 30 ? text.substring(0, 30) + "..." : text)
-          : sessions.find((s) => s.id === currentSessionId)?.topic || "Chat";
+        const topic = getTopic(text, sessionId);
 
         saveSessionToDb(updatedHistory, topic, sessionId).catch(() => {
           setSaveStatus("error");
@@ -298,7 +298,6 @@ export function useChat({
     },
     [
       history,
-      sessions,
       currentSessionId,
       saveSessionToDb,
       fetchSessions,
@@ -307,6 +306,7 @@ export function useChat({
       startQuiz,
       getCustomModelConfig,
       setSaveStatus,
+      getTopic,
     ],
   );
 

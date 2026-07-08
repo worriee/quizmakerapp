@@ -1,33 +1,21 @@
-/**
- * Strips thinking/reasoning text that local models output without <thought> tags.
- * Handles cases where models echo system prompts or dump internal reasoning.
- */
 function stripThinkingText(text) {
   if (!text) return text;
 
   let cleaned = text;
 
-  // Remove leading backtick artifacts (model echoing system prompt formatting)
   cleaned = cleaned.replace(/^`+\s*/m, "");
 
-  // Remove system prompt echo patterns
   cleaned = cleaned.replace(/^[\s\S]*?AI Learning Assistant Setup\s*/i, "");
 
-  // Try to find response markers (Final:, Response:, Answer:) used by models
-  // that output structured plain text instead of <final> tags.
-  // Use the last occurrence (in case there are multiple markers in the text).
   const markerParts = cleaned.split(/\b(?:Final|Response|Answer)\s*:\s*/i);
   if (markerParts.length > 1) {
     let afterMarker = markerParts[markerParts.length - 1].trim();
-    // Strip short label prefix (e.g., "Plain text explanation." — 22 chars ending with period)
     const labelMatch = afterMarker.match(/^([A-Za-z ]{1,30}\.)\s*/);
     if (labelMatch) {
       afterMarker = afterMarker.slice(labelMatch[1].length).trim();
     }
     cleaned = afterMarker;
   } else {
-    // Find the first greeting phrase and strip everything before it.
-    // This handles cases where thinking is dominant (>70% of text).
     const greetingPatterns =
       /\b(?:Hello|Hi there|Hey|Welcome|I can help|I'm here|What would|Here is|Sure|Of course|Absolutely|Certainly|Hi!|Hello!)/i;
     const greetingMatch = cleaned.match(greetingPatterns);
@@ -36,16 +24,11 @@ function stripThinkingText(text) {
     }
   }
 
-  // Clean up any remaining artifacts
   cleaned = cleaned.replace(/^[.\s]+/, "").trim();
 
   return cleaned;
 }
 
-/**
- * Checks if text looks like raw thinking/reasoning rather than a response.
- * Returns true if the text is mostly thinking patterns.
- */
 function isMostlyThinking(text) {
   if (!text || text.length < 20) return false;
 
@@ -71,6 +54,41 @@ function isMostlyThinking(text) {
   return matchCount >= 2;
 }
 
+export function generateTitle(message) {
+  if (!message || message.trim().length < 3) return "New Chat";
+
+  let title = message.trim();
+
+  const fillerPatterns = [
+    /^(can you|please|could you|i want to|i need to|help me (?:with|understand)|tell me about|explain|what is|what are|how do|how does|give me|show me|teach me|i'd like to learn|i'm curious about|what do you know about|write|create|make)\s+/i,
+  ];
+  for (const pattern of fillerPatterns) {
+    const cleaned = title.replace(pattern, "");
+    if (cleaned !== title && cleaned.length >= 3) {
+      title = cleaned;
+      break;
+    }
+  }
+
+  if (/\b(quiz|test|exam|assess)\b/i.test(title)) {
+    title = title.replace(/\b(quiz|test|exam|assess)\b/gi, "").trim();
+    title += " Quiz";
+  }
+
+  title = title.replace(/[.!?]+$/, "").trim();
+
+  title = title.charAt(0).toUpperCase() + title.slice(1);
+
+  if (title.length > 35) {
+    title = title.substring(0, 35);
+    const lastSpace = title.lastIndexOf(" ");
+    if (lastSpace > 10) title = title.substring(0, lastSpace);
+    title += "...";
+  }
+
+  return title.length >= 3 ? title : "New Chat";
+}
+
 export function parseAIResponse(raw) {
   if (!raw) {
     return {
@@ -88,7 +106,6 @@ export function parseAIResponse(raw) {
   const thought = thoughtMatch ? thoughtMatch[1].trim() : "";
   let final = finalMatch ? finalMatch[1].trim() : "";
 
-  // If <title> tags are missing, try "Title:" line in plain text format
   if (!title) {
     const titleLineMatch = raw.match(/Title\s*:\s*([^\n]+)/i);
     if (titleLineMatch) {
@@ -96,7 +113,6 @@ export function parseAIResponse(raw) {
     }
   }
 
-  // Fallback: If <final> tags are missing, try to extract content
   if (!final) {
     const remainingText = raw
       .replace(/<thought>[\s\S]*?<\/thought>/g, "")
@@ -114,7 +130,7 @@ export function parseAIResponse(raw) {
           final = remainingText;
         }
       } catch {
-        // Not valid JSON, treat as plain text
+        // not valid JSON
       }
     }
 
@@ -123,24 +139,17 @@ export function parseAIResponse(raw) {
     }
   }
 
-  // Sanitize: strip remaining tag markup from models with incomplete tags
   const tagRegex = /<\/?(?:thought|final|title)\s*\/?>/gi;
   final = final.replace(tagRegex, "").trim();
 
-  // If the output looks like it's mostly thinking (no proper tags used),
-  // try to extract just the actual response
   if (!thoughtMatch && isMostlyThinking(final)) {
     final = stripThinkingText(final);
   }
 
-  // Sanitize title: if no proper <thought> tags and title contains thinking patterns, clear it
-  // Titles are short — if it looks like thinking, don't try to salvage it, just clear it
   if (!thoughtMatch && title && isMostlyThinking(title)) {
     title = "";
   }
 
-  // Extract a fallback title from the cleaned AI response for session naming
-  // Uses the first substantive sentence (skip short greetings, etc.)
   let fallbackTitle = "";
   if (!title && final.length > 15) {
     const sentences = final.match(/[^.!?]+[.!?]+/g) || [];
@@ -154,7 +163,6 @@ export function parseAIResponse(raw) {
     }
   }
 
-  // Attempt to parse the final content as JSON for structured data
   let structured = {};
   try {
     const parsed = JSON.parse(final);
@@ -162,7 +170,7 @@ export function parseAIResponse(raw) {
       structured = parsed;
     }
   } catch {
-    // Not JSON, structured remains empty
+    // not JSON
   }
 
   return {
