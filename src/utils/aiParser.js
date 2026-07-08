@@ -54,6 +54,18 @@ function isMostlyThinking(text) {
   return matchCount >= 2;
 }
 
+function trimTitle(title) {
+  if (!title) return "";
+  let trimmed = title.replace(/^(The|A|An)\s+/i, "").trim();
+  if (trimmed.length > 30) {
+    trimmed = trimmed.substring(0, 30);
+    const lastSpace = trimmed.lastIndexOf(" ");
+    if (lastSpace > 10) trimmed = trimmed.substring(0, lastSpace);
+  }
+  trimmed = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  return trimmed.length >= 3 ? trimmed : "";
+}
+
 export function generateTitle(message) {
   if (!message || message.trim().length < 3) return "New Chat";
 
@@ -102,14 +114,14 @@ export function parseAIResponse(raw) {
   const thoughtMatch = raw.match(/<thought>([\s\S]*?)<\/thought>/);
   const finalMatch = raw.match(/<final>([\s\S]*?)<\/final>/);
 
-  let title = titleMatch ? titleMatch[1].trim() : "";
+  let title = titleMatch ? trimTitle(titleMatch[1]) : "";
   const thought = thoughtMatch ? thoughtMatch[1].trim() : "";
   let final = finalMatch ? finalMatch[1].trim() : "";
 
   if (!title) {
     const titleLineMatch = raw.match(/Title\s*:\s*([^\n]+)/i);
     if (titleLineMatch) {
-      title = titleLineMatch[1].trim();
+      title = trimTitle(titleLineMatch[1]);
     }
   }
 
