@@ -92,7 +92,7 @@ const QuizInterface = ({ quizData, onAnswer, onExit }) => {
             {options.map((option, idx) => {
               let buttonClass =
                 "text-left px-4 sm:px-6 py-3 sm:py-5 rounded-2xl border-2 transition-all text-sm sm:text-base font-medium ";
-              
+
               if (selectedOption === null) {
                 buttonClass +=
                   "border-app bg-app-surface hover:bg-[#7b9acc]/5 hover:border-[#7b9acc]/50 text-app";

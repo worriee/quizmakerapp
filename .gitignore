@@ -17,7 +17,11 @@ AGENTS.md
 opencode.json
 server.js
 
-
+# Test artifacts
+test-results/
+playwright-report/
+coverage/
+*.test-results/
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

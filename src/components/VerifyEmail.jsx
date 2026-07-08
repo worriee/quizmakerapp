@@ -7,16 +7,16 @@ const VerifyEmail = () => {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-
-    if (!token) {
-      setStatus('error');
-      setMessage('No verification token provided.');
-      return;
-    }
-
     const verify = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+
+      if (!token) {
+        setStatus('error');
+        setMessage('No verification token provided.');
+        return;
+      }
+
       try {
         const response = await fetch(`${API_BASE_URL}/auth/verify-email`, {
           method: 'POST',

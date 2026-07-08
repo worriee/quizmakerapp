@@ -330,28 +330,8 @@ const MainLayout = ({
             />
           </div>
 
-          {/* Right group: theme toggle, save status, profile */}
+          {/* Right group: save status, theme toggle, profile */}
           <div className="flex items-center gap-2 sm:gap-3 ml-auto">
-            <button
-              onClick={onToggleTheme}
-              className="p-1.5 rounded-full hover:bg-[#7b9acc]/10 transition-all text-app/70 hover:text-app"
-              aria-label="Toggle theme"
-            >
-              {theme === "dark" ? (
-                <img
-                  src={lightIcon}
-                  alt="Light mode"
-                  className="w-4 h-4 sm:w-5 sm:h-5 brightness-0 invert"
-                />
-              ) : (
-                <img
-                  src={darkIcon}
-                  alt="Dark mode"
-                  className="w-4 h-4 sm:w-5 sm:h-5"
-                />
-              )}
-            </button>
-
             {saveStatus !== "synced" && (
               <div
                 className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium transition-all border border-app ${
@@ -380,6 +360,26 @@ const MainLayout = ({
                 )}
               </div>
             )}
+
+            <button
+              onClick={onToggleTheme}
+              className="p-1.5 rounded-full hover:bg-[#7b9acc]/10 transition-all text-app/70 hover:text-app"
+              aria-label="Toggle theme"
+            >
+              {theme === "dark" ? (
+                <img
+                  src={lightIcon}
+                  alt="Light mode"
+                  className="w-4 h-4 sm:w-5 sm:h-5 brightness-0 invert"
+                />
+              ) : (
+                <img
+                  src={darkIcon}
+                  alt="Dark mode"
+                  className="w-4 h-4 sm:w-5 sm:h-5"
+                />
+              )}
+            </button>
 
             <div className="relative">
               <button

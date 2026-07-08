@@ -1,39 +1,85 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo } from "react";
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = "/api";
 
 const COMMON_PASSWORDS = new Set([
-  'password', 'password1', 'password123', 'p@ssword', 'p@ssw0rd', 'pass123',
-  '123456', '12345678', '123456789', '12345', '1234567', '1234567890',
-  'qwerty', 'qwerty123', 'qwertyuiop',
-  'abc123', 'abcdef', 'abcdefg',
-  'monkey', 'dragon', 'master', 'login', 'princess', 'football',
-  'shadow', 'sunshine', 'trustno1', 'iloveyou', 'batman', 'access',
-  'hello', 'charlie', 'donald', 'admin', 'welcome', 'passw0rd',
-  'letmein', 'mustang', 'michael', 'ninja', 'mustang1', 'jesus',
-  'changeme', 'test', 'guest', 'hello123',
-  'summer', 'winter', 'spring', 'fall', 'love', 'secret', 'solo',
+  "password",
+  "password1",
+  "password123",
+  "p@ssword",
+  "p@ssw0rd",
+  "pass123",
+  "123456",
+  "12345678",
+  "123456789",
+  "12345",
+  "1234567",
+  "1234567890",
+  "qwerty",
+  "qwerty123",
+  "qwertyuiop",
+  "abc123",
+  "abcdef",
+  "abcdefg",
+  "monkey",
+  "dragon",
+  "master",
+  "login",
+  "princess",
+  "football",
+  "shadow",
+  "sunshine",
+  "trustno1",
+  "iloveyou",
+  "batman",
+  "access",
+  "hello",
+  "charlie",
+  "donald",
+  "admin",
+  "welcome",
+  "passw0rd",
+  "letmein",
+  "mustang",
+  "michael",
+  "ninja",
+  "mustang1",
+  "jesus",
+  "changeme",
+  "test",
+  "guest",
+  "hello123",
+  "summer",
+  "winter",
+  "spring",
+  "fall",
+  "love",
+  "secret",
+  "solo",
 ]);
 
 const getPasswordChecks = (pw) => [
-  { label: 'At least 8 characters', met: pw.length >= 8 },
-  { label: 'One uppercase letter', met: /[A-Z]/.test(pw) },
-  { label: 'One lowercase letter', met: /[a-z]/.test(pw) },
-  { label: 'One number', met: /[0-9]/.test(pw) },
-  { label: 'Not a common password', met: pw.length > 0 && !COMMON_PASSWORDS.has(pw.toLowerCase()) },
+  { label: "At least 8 characters", met: pw.length >= 8 },
+  { label: "One uppercase letter", met: /[A-Z]/.test(pw) },
+  { label: "One lowercase letter", met: /[a-z]/.test(pw) },
+  { label: "One number", met: /[0-9]/.test(pw) },
+  {
+    label: "Not a common password",
+    met: pw.length > 0 && !COMMON_PASSWORDS.has(pw.toLowerCase()),
+  },
 ];
 
 const ResetPassword = () => {
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState('form'); // form | success | error
-  const [message, setMessage] = useState('');
+  const [status, setStatus] = useState("form"); // form | success | error
+  const [message, setMessage] = useState("");
 
   const passwordChecks = useMemo(() => getPasswordChecks(password), [password]);
   const passwordValid = passwordChecks.every((c) => c.met);
 
   const params = new URLSearchParams(window.location.search);
-  const token = params.get('token');
+  const token = params.get("token");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -43,22 +89,22 @@ const ResetPassword = () => {
 
     try {
       const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, password }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to reset password');
+        throw new Error(data.error || "Failed to reset password");
       }
 
-      setStatus('success');
-      setMessage(data.message || 'Password reset successfully!');
+      setStatus("success");
+      setMessage(data.message || "Password reset successfully!");
     } catch (err) {
-      setStatus('error');
-      setMessage(err.message || 'Something went wrong. Please try again.');
+      setStatus("error");
+      setMessage(err.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -68,9 +114,13 @@ const ResetPassword = () => {
     return (
       <div className="flex items-center justify-center min-h-screen bg-app p-4">
         <div className="bg-app-surface p-8 rounded-2xl shadow-xl max-w-md w-full border border-app text-center">
-          <h1 className="text-3xl font-extrabold text-[#7b9acc] mb-4">TUON AI</h1>
+          <h1 className="text-3xl font-extrabold text-[#7b9acc] mb-4">
+            TUON AI
+          </h1>
           <h2 className="text-xl font-bold text-app mb-2">Invalid Link</h2>
-          <p className="text-app-secondary mb-6">No reset token provided. Please request a new password reset link.</p>
+          <p className="text-app-secondary mb-6">
+            No reset token provided. Please request a new password reset link.
+          </p>
           <a
             href="/forgot-password"
             className="inline-block bg-[#7b9acc] text-white font-semibold py-2 px-6 rounded-lg hover:opacity-90 transition-colors"
@@ -86,15 +136,27 @@ const ResetPassword = () => {
     <div className="flex items-center justify-center min-h-screen bg-app p-4">
       <div className="bg-app-surface p-8 rounded-2xl shadow-xl max-w-md w-full border border-app">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-extrabold text-[#7b9acc] mb-1">TUON AI</h1>
+          <h1 className="text-3xl font-extrabold text-[#7b9acc] mb-1">
+            TUON AI
+          </h1>
           <h2 className="text-xl font-bold text-app">Set New Password</h2>
         </div>
 
-        {status === 'success' && (
+        {status === "success" && (
           <div className="text-center">
             <div className="w-16 h-16 bg-green-status rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-green-status" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <svg
+                className="w-8 h-8 text-green-status"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </div>
             <p className="text-app-secondary mb-6">{message}</p>
@@ -107,11 +169,21 @@ const ResetPassword = () => {
           </div>
         )}
 
-        {status === 'error' && (
+        {status === "error" && (
           <div className="text-center">
             <div className="w-16 h-16 bg-red-status rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-red-status" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-8 h-8 text-red-status"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </div>
             <h2 className="text-xl font-bold text-app mb-2">Reset Failed</h2>
@@ -125,10 +197,12 @@ const ResetPassword = () => {
           </div>
         )}
 
-        {status === 'form' && (
+        {status === "form" && (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-app mb-1">New Password</label>
+              <label className="block text-sm font-medium text-app mb-1">
+                New Password
+              </label>
               <input
                 type="password"
                 value={password}
@@ -143,11 +217,22 @@ const ResetPassword = () => {
             {password.length > 0 && (
               <div className="space-y-1">
                 {passwordChecks.map((check) => (
-                  <div key={check.label} className="flex items-center gap-2 text-[11px]">
-                    <span className={check.met ? 'text-green-status' : 'text-app-muted'}>
-                      {check.met ? '✓' : '○'}
+                  <div
+                    key={check.label}
+                    className="flex items-center gap-2 text-[11px]"
+                  >
+                    <span
+                      className={
+                        check.met ? "text-green-status" : "text-app-muted"
+                      }
+                    >
+                      {check.met ? "✓" : "○"}
                     </span>
-                    <span className={check.met ? 'text-green-status' : 'text-app-secondary'}>
+                    <span
+                      className={
+                        check.met ? "text-green-status" : "text-app-secondary"
+                      }
+                    >
                       {check.label}
                     </span>
                   </div>
@@ -160,7 +245,7 @@ const ResetPassword = () => {
               disabled={loading || !passwordValid}
               className="w-full bg-[#7b9acc] text-white font-semibold py-2 rounded-lg hover:bg-[#7b9acc] transition-colors shadow-md disabled:bg-[#7b9acc]/30"
             >
-              {loading ? 'Resetting...' : 'Reset Password'}
+              {loading ? "Resetting..." : "Reset Password"}
             </button>
           </form>
         )}

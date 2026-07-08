@@ -1,5 +1,3 @@
-/* global process */
-
 /**
  * sanitize.js — Input sanitization, prompt injection detection, and output validation.
  * All defenses are server-side to prevent client-side bypass.

@@ -148,6 +148,7 @@ const ModelSelector = ({ selectedModel, setSelectedModel, customModels = [], onS
       )}
 
       <CustomLLMModal
+        key={isModalOpen}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveCustom}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useCallback } from "react";
 import MainLayout from "./components/MainLayout";
 import ChatInterface from "./components/ChatInterface";
 import Login from "./components/Login";
@@ -8,42 +8,17 @@ import QuizSetup from "./components/QuizSetup";
 import VerifyEmail from "./components/VerifyEmail";
 import ForgotPassword from "./components/ForgotPassword";
 import ResetPassword from "./components/ResetPassword";
-import { parseAIResponse } from "./utils/aiParser";
 import { useTheme } from "./hooks/useTheme";
 import { useCustomModels } from "./hooks/useCustomModels";
 import { useSessions } from "./hooks/useSessions";
-
-const API_BASE_URL = "/api";
+import { useChat } from "./hooks/useChat";
+import { useAuth } from "./hooks/useAuth";
 
 function App() {
-  // Simple path-based routing for auth pages (no React Router needed)
-  const path = window.location.pathname;
-  if (path === "/verify-email") return <VerifyEmail />;
-  if (path === "/forgot-password") return <ForgotPassword />;
-  if (path === "/reset-password") return <ResetPassword />;
-
-  const [user, setUser] = useState(null);
-  const [bootStatus, setBootStatus] = useState("INITIALIZING");
-  const bootStatusRef = useRef("INITIALIZING");
-
-  const updateBootStatus = useCallback((status) => {
-    setBootStatus(status);
-    bootStatusRef.current = status;
-  }, []);
-
-  const [messages, setMessages] = useState([]);
-  const [history, setHistory] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [abortController, setAbortController] = useState(null);
-  const [view, setView] = useState("chat");
-  const [quizData, setQuizData] = useState(null);
-  const [quizScore, setQuizScore] = useState(0);
-  const [quizParams, setQuizParams] = useState({
-    itemCount: 5,
-    difficulty: "Normal",
-  });
-  const [wrongAnswers, setWrongAnswers] = useState([]);
+  // 1. Theme
   const { theme, toggleTheme } = useTheme();
+
+  // 2. Custom Models
   const {
     selectedModel,
     setSelectedModel,
@@ -52,6 +27,8 @@ function App() {
     deleteCustomModel,
     getCustomModelConfig,
   } = useCustomModels();
+
+  // 3. Sessions
   const {
     sessions,
     currentSessionId,
@@ -67,554 +44,98 @@ function App() {
     reset: resetSessions,
   } = useSessions();
 
-  const handleLoadSession = useCallback(
+  // 4. Chat (all messages, history, quiz state, and handlers)
+  const {
+    messages,
+    history,
+    isLoading,
+    view,
+    setView,
+    quizData,
+    quizScore,
+    quizParams,
+    wrongAnswers,
+    sendMessage,
+    startQuiz,
+    quizAnswer,
+    stopGenerating,
+    newChat,
+    resetToChat,
+    loadSessionData,
+    reset: resetChat,
+  } = useChat({
+    selectedModel,
+    getCustomModelConfig,
+    fetchSessions,
+    saveSessionToDb,
+    currentSessionId,
+    setCurrentSessionId,
+    sessions,
+    setSaveStatus,
+  });
+
+  // 5. Restore active session (for boot + sidebar clicks)
+  const restoreActiveSession = useCallback(
     async (sessionId) => {
-      const session = await loadSession(sessionId);
-      if (!session) return;
-
-      const historyData = session.history || [];
-      setHistory(historyData);
-      setView("chat");
-
-      const loadedMessages = historyData.map((item) => {
-        if (item.role === "model") {
-          const { thought, final, structured } = parseAIResponse(
-            item.parts[0].text,
-          );
-          return {
-            role: "model",
-            raw: item.parts[0].text,
-            text: structured.text || final,
-            thought: thought,
-            ...structured,
-          };
-        }
-        return { role: "user", text: item.parts[0].text, type: "text" };
-      });
-
-      setMessages(loadedMessages);
+      const savedId =
+        sessionId || localStorage.getItem("quizmaker_current_session_id");
+      if (!savedId) return;
+      const session = await loadSession(savedId);
+      if (session) loadSessionData(session);
     },
-    [loadSession],
+    [loadSession, loadSessionData],
   );
 
+  // 6. Auth (boot sequence runs on mount)
+  const { user, bootStatus, logout, retryBoot } = useAuth({
+    fetchSessions,
+    restoreActiveSession,
+  });
+
+  // 7. Logout handler (calls hook logout + resets sessions + chat)
   const handleLogout = useCallback(async () => {
-    try {
-      await fetch(`${API_BASE_URL}/auth/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch (e) {
-      console.error("Logout error:", e);
-    } finally {
-      resetSessions();
-      setUser(null);
-      setMessages([]);
-      setHistory([]);
-      setBootStatus("UNAUTHENTICATED");
-    }
-  }, [resetSessions]);
+    await logout();
+    resetSessions();
+    resetChat();
+  }, [logout, resetSessions, resetChat]);
 
-  const handleStartQuiz = useCallback(
-    async (
-      params = null,
-      overrideSessionId = null,
-      initialHistoryEntries = [],
-      overrideTopic = null,
-    ) => {
-      setIsLoading(true);
-
-      let finalParams = { ...quizParams };
-      if (params) {
-        finalParams = params;
-        setQuizParams(params);
-      }
-
-      // Construct dynamic prompt
-      const difficultyPrompts = {
-        Easy: "Generate questions strictly based on the notes provided. Focus on recall and basic understanding.",
-        Normal:
-          "Generate a mix of direct note-based questions and situational application questions. Require the user to apply concepts to simple scenarios.",
-        Hard: "Generate primarily situational and complex scenarios. Questions should require critical thinking and synthesis of multiple concepts from the notes.",
-      };
-
-      let prompt = `Now, start a mock quiz based on the notes provided above.
-  Number of items: ${finalParams.itemCount}.
-  Difficulty: ${finalParams.difficulty}.
-  ${difficultyPrompts[finalParams.difficulty]}`;
-
-      if (params?.growthAreas && params.growthAreas.length > 0) {
-        const missed = params.growthAreas
-          .map((a) => `Q: ${a.question} (Correct: ${a.correctOption})`)
-          .join("\n");
-        prompt += `\n\nFocus specifically on these weak points from the previous attempt:\n${missed}`;
-      }
-
-      setWrongAnswers([]); // Reset wrong answers for new quiz
-
-      const controller = new AbortController();
-      setAbortController(controller);
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/chat`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          signal: controller.signal,
-          body: JSON.stringify({
-            message: prompt,
-            history: history,
-            model: selectedModel,
-            customModelConfig: getCustomModelConfig(selectedModel),
-          }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(
-            errorData.error || `Server responded with ${response.status}`,
-          );
-        }
-
-        const data = await response.json();
-        const rawResponse = data.raw || "";
-        const { thought, final, structured } = parseAIResponse(rawResponse);
-        const displayText = structured.text || final;
-
-        if (structured.type === "quiz") {
-          setQuizData(structured);
-          setView("quiz");
-          setQuizScore(0);
-        } else {
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "model",
-              raw: rawResponse,
-              text: structured.text || displayText,
-              thought: thought,
-              ...structured,
-              ...data,
-            },
-          ]);
-        }
-
-        setIsLoading(false);
-        setAbortController(null);
-
-        const baseHistory =
-          initialHistoryEntries && initialHistoryEntries.length > 0
-            ? initialHistoryEntries
-            : history;
-        const targetSessionId = overrideSessionId || currentSessionId;
-
-        const updatedHistory = [
-          ...baseHistory,
-          {
-            role: "user",
-            parts: [{ text: prompt }],
-          },
-          { role: "model", parts: [{ text: rawResponse }] },
-        ];
-        setHistory(updatedHistory);
-
-        const topic =
-          overrideTopic ||
-          sessions.find((s) => s.id === targetSessionId)?.topic ||
-          "Quiz Session";
-        saveSessionToDb(updatedHistory, topic, targetSessionId).catch(() => {
-          setSaveStatus("error");
-        });
-      } catch (error) {
-        if (error.name === "AbortError") {
-          console.log("Request aborted by user");
-        } else {
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "model",
-              text: `Error: ${error.message}`,
-              type: "text",
-            },
-          ]);
-        }
-      } finally {
-        setIsLoading(false);
-        setAbortController(null);
-      }
-    },
-    [
-      user,
-      history,
-      sessions,
-      currentSessionId,
-      saveSessionToDb,
-      selectedModel,
-      getCustomModelConfig,
-    ],
-  );
-
-  const handleSendMessage = useCallback(
-    async (text) => {
-      setView("chat");
-      let sessionId = currentSessionId;
-
-      const userMsg = {
-        role: "user",
-        text: text,
-        type: "text",
-      };
-      setMessages((prev) => [...prev, userMsg]);
-      setIsLoading(true);
-
-      const controller = new AbortController();
-      setAbortController(controller);
-
-      try {
-        if (!sessionId) {
-          const initialTopic =
-            text.length > 30 ? text.substring(0, 30) + "..." : text;
-          try {
-            const response = await fetch(`${API_BASE_URL}/session/create`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({ topic: initialTopic, history: [] }),
-            });
-            if (!response.ok) throw new Error("Failed to create session");
-            const { session } = await response.json();
-            sessionId = session.id;
-            setCurrentSessionId(sessionId);
-            await fetchSessions();
-          } catch (error) {
-            console.error("Error creating initial session:", error);
-          }
-        }
-
-        const response = await fetch(`${API_BASE_URL}/chat`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          signal: controller.signal,
-          body: JSON.stringify({
-            message: text,
-            history: history,
-            model: selectedModel,
-            customModelConfig: getCustomModelConfig(selectedModel),
-          }),
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`Server Error ${response.status}:`, errorText);
-          let errorMsg = `Server responded with ${response.status}`;
-          try {
-            const errorData = JSON.parse(errorText);
-            errorMsg = errorData.error || errorMsg;
-          } catch {
-            // Non-JSON response (e.g., HTML 502 page) — use raw status text
-          }
-          throw new Error(errorMsg);
-        }
-
-        const data = await response.json();
-        const rawResponse = data.raw || "";
-
-        const { title, thought, final, fallbackTitle, structured } =
-          parseAIResponse(rawResponse);
-        const displayText = structured.text || final;
-
-        if (structured.type === "quiz") {
-          const updatedHistory = [
-            ...history,
-            { role: "user", parts: [{ text }] },
-            { role: "model", parts: [{ text: rawResponse }] },
-          ];
-          setHistory(updatedHistory);
-
-          const topic = !currentSessionId
-            ? title ||
-              fallbackTitle ||
-              (text.length > 30 ? text.substring(0, 30) + "..." : text)
-            : sessions.find((s) => s.id === currentSessionId)?.topic || "Chat";
-
-          saveSessionToDb(updatedHistory, topic, sessionId).catch(() => {
-            setSaveStatus("error");
-          });
-
-          setView("quiz");
-          handleStartQuiz({ itemCount: 5, difficulty: "Normal" });
-          return;
-        }
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "model",
-            raw: rawResponse,
-            text: structured.text || displayText,
-            thought: thought,
-            ...structured,
-            ...data,
-          },
-        ]);
-
-        const updatedHistory = [
-          ...history,
-          { role: "user", parts: [{ text }] },
-          { role: "model", parts: [{ text: rawResponse }] },
-        ];
-        setHistory(updatedHistory);
-
-        const topic = !currentSessionId
-          ? title ||
-            fallbackTitle ||
-            (text.length > 30 ? text.substring(0, 30) + "..." : text)
-          : sessions.find((s) => s.id === currentSessionId)?.topic || "Chat";
-
-        saveSessionToDb(updatedHistory, topic, sessionId).catch(() => {
-          setSaveStatus("error");
-        });
-      } catch (error) {
-        if (error.name !== "AbortError") {
-          console.error("Error sending message:", error);
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "model",
-              text: `Error: ${error.message}`,
-              type: "text",
-            },
-          ]);
-        }
-      } finally {
-        setIsLoading(false);
-        setAbortController(null);
-      }
-    },
-    [
-      user,
-      history,
-      sessions,
-      currentSessionId,
-      saveSessionToDb,
-      fetchSessions,
-      setCurrentSessionId,
-      selectedModel,
-      handleStartQuiz,
-      getCustomModelConfig,
-    ],
-  );
-
-  const stopGenerating = useCallback(() => {
-    if (abortController) {
-      abortController.abort();
-      setIsLoading(false);
-      setAbortController(null);
-    }
-  }, [abortController]);
-
-  const handleNewChat = useCallback(() => {
-    setMessages([]);
-    setHistory([]);
-    setCurrentSessionId(null);
-    setView("chat");
-  }, [setCurrentSessionId]);
-
+  // 8. Delete session handler (passes newChat as callback for active session)
   const handleDeleteSession = useCallback(
-    (sessionId) => deleteSession(sessionId, handleNewChat),
-    [deleteSession, handleNewChat],
+    (sessionId) => deleteSession(sessionId, newChat),
+    [deleteSession, newChat],
   );
 
-  const handleResetToChat = useCallback(() => {
-    setView("chat");
-    setQuizData(null);
-    setQuizScore(0);
-    setQuizParams({ itemCount: 5, difficulty: "Normal" });
-    setWrongAnswers([]);
-  }, []);
-
-  const handleQuizAnswer = useCallback(
-    async (option) => {
-      setIsLoading(true);
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/chat`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            message: option,
-            history: history,
-            model: selectedModel,
-            customModelConfig: getCustomModelConfig(selectedModel),
-          }),
-        });
-
-        if (!response.ok) throw new Error("Failed to get quiz feedback");
-
-        const data = await response.json();
-        const rawResponse = data.raw || "";
-        const { structured } = parseAIResponse(rawResponse);
-
-        if (structured.type === "quiz") {
-          if (structured.feedback?.isCorrect) {
-            setQuizScore((prev) => prev + 1);
-          } else if (structured.feedback) {
-            // Track wrong answers for growth areas
-            setWrongAnswers((prev) => [
-              ...prev,
-              {
-                question: quizData?.text || "Unknown Question",
-                correctOption:
-                  structured.feedback.text || "No correct answer provided",
-              },
-            ]);
-          }
-
-          if (structured.isFinished) {
-            setView("summary");
-          } else {
-            setQuizData(structured);
-          }
-        }
-
-        // Update history to ensure AI progresses to the next question
-        const updatedHistory = [
-          ...history,
-          { role: "user", parts: [{ text: option }] },
-          { role: "model", parts: [{ text: rawResponse }] },
-        ];
-        setHistory(updatedHistory);
-
-        // Persist progress to DB
-        const topic =
-          sessions.find((s) => s.id === currentSessionId)?.topic ||
-          "Quiz Session";
-        saveSessionToDb(updatedHistory, topic, currentSessionId).catch(() => {
-          setSaveStatus("error");
-        });
-      } catch (error) {
-        console.error("Error handling quiz answer:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [
-      user,
-      history,
-      sessions,
-      currentSessionId,
-      saveSessionToDb,
-      selectedModel,
-      getCustomModelConfig,
-    ],
-  );
-
-  useEffect(() => {
-    let isSubscribed = true;
-
-    const withTimeout = (promise, ms, taskName) => {
-      const timeout = new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error(`${taskName} timed out after ${ms}ms`)),
-          ms,
-        ),
-      );
-      return Promise.race([promise, timeout]);
-    };
-
-    const bootSequence = async () => {
-      try {
-        // 1. Auth Resolution via custom endpoint (with 5s timeout)
-        const response = await withTimeout(
-          fetch(`${API_BASE_URL}/auth/me`, {
-            method: "GET",
-            credentials: "include",
-          }),
-          5000,
-          "Auth session check",
-        );
-
-        if (!response.ok) {
-          if (isSubscribed) updateBootStatus("UNAUTHENTICATED");
-          return;
-        }
-
-        const data = await response.json();
-        if (!isSubscribed) return;
-
-        setUser(data.user);
-        updateBootStatus("AUTHENTICATING");
-
-        // 2. Context Restoration
-        await Promise.all([
-          withTimeout(fetchSessions(), 7000, "Fetch sessions").catch((e) =>
-            console.warn(
-              "[Boot] fetchSessions failed/timed out, continuing...",
-              e,
-            ),
-          ),
-          (async () => {
-            const savedSessionId = localStorage.getItem(
-              "quizmaker_current_session_id",
-            );
-            if (savedSessionId) {
-              try {
-                await withTimeout(
-                  handleLoadSession(savedSessionId),
-                  7000,
-                  "Load active session",
-                );
-              } catch (e) {
-                console.warn(
-                  "[Boot] handleLoadSession failed/timed out, continuing...",
-                  e,
-                );
-              }
-            }
-          })(),
-        ]);
-
-        if (isSubscribed) updateBootStatus("READY");
-      } catch (error) {
-        console.error("Critical boot sequence failure:", error);
-        if (isSubscribed) {
-          updateBootStatus("UNAUTHENTICATED");
-        }
-      }
-    };
-
-    // Global watchdog
-    const bootWatchdog = setTimeout(() => {
-      if (
-        isSubscribed &&
-        (bootStatusRef.current === "INITIALIZING" ||
-          bootStatusRef.current === "AUTHENTICATING")
-      ) {
-        console.error(
-          "[Boot] Global watchdog triggered: boot sequence took too long. Forcing READY state.",
-        );
-        updateBootStatus("READY");
-      }
-    }, 15000);
-
-    bootSequence();
-
-    return () => {
-      isSubscribed = false;
-      clearTimeout(bootWatchdog);
-    };
-  }, [fetchSessions, handleLoadSession]);
+  // Simple path-based routing for auth pages (no React Router needed)
+  // Must be AFTER all hooks to satisfy React Hooks rules
+  const path = window.location.pathname;
+  if (path === "/verify-email") return <VerifyEmail />;
+  if (path === "/forgot-password") return <ForgotPassword />;
+  if (path === "/reset-password") return <ResetPassword />;
 
   return (
     <>
-      {bootStatus === "INITIALIZING" || bootStatus === "AUTHENTICATING" ? (
+      {bootStatus === "CONNECTION_ERROR" ? (
+        <div className="flex items-center justify-center h-screen w-full bg-app">
+          <div className="text-center max-w-sm mx-auto px-4">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-warning flex items-center justify-center">
+              <span className="text-2xl font-bold text-warning">!</span>
+            </div>
+            <p className="text-xl font-bold text-app mb-2">
+              Connection Lost
+            </p>
+            <p className="text-sm text-app-secondary mb-6">
+              Unable to reach the server. Check your internet connection and
+              try again.
+            </p>
+            <button
+              onClick={retryBoot}
+              className="px-6 py-2.5 bg-[#7b9acc] text-white rounded-lg font-medium hover:opacity-90 transition-all cursor-pointer"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      ) : bootStatus === "INITIALIZING" || bootStatus === "AUTHENTICATING" ? (
         <div className="flex items-center justify-center h-screen w-full bg-app text-[#7b9acc]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#7b9acc] mx-auto mb-4"></div>
@@ -628,10 +149,10 @@ function App() {
       ) : (
         <MainLayout
           user={user}
-          onNewChat={handleNewChat}
+          onNewChat={newChat}
           onLogout={handleLogout}
           sessions={sessions}
-          onLoadSession={handleLoadSession}
+          onLoadSession={restoreActiveSession}
           currentSessionId={currentSessionId}
           onDeleteSession={handleDeleteSession}
           onRenameSession={renameSession}
@@ -653,7 +174,7 @@ function App() {
           {view === "chat" && (
             <ChatInterface
               messages={messages}
-              onSendMessage={handleSendMessage}
+              onSendMessage={sendMessage}
               isLoading={isLoading}
               onStartQuiz={() => {
                 if (messages.length === 0) return;
@@ -663,16 +184,13 @@ function App() {
             />
           )}
           {view === "quizSetup" && (
-            <QuizSetup
-              onStart={handleStartQuiz}
-              onExit={() => setView("chat")}
-            />
+            <QuizSetup onStart={startQuiz} onExit={() => setView("chat")} />
           )}
           {view === "quiz" && (
             <QuizInterface
               key={quizData?.progress?.current || 1}
               quizData={quizData}
-              onAnswer={handleQuizAnswer}
+              onAnswer={quizAnswer}
               onExit={() => setView("chat")}
             />
           )}
@@ -681,9 +199,9 @@ function App() {
               summary={quizData?.summary}
               score={quizScore}
               total={quizData?.progress?.total}
-              onResetToChat={handleResetToChat}
+              onResetToChat={resetToChat}
               onGrowthRetry={() =>
-                handleStartQuiz({ ...quizParams, growthAreas: wrongAnswers })
+                startQuiz({ ...quizParams, growthAreas: wrongAnswers })
               }
               hasWrongAnswers={wrongAnswers.length > 0}
             />

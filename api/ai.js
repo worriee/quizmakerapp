@@ -1,21 +1,20 @@
-/* global process */
 import "dotenv/config";
 
 const MODEL_CONFIGS = {
-  'gemini-3.1-flash-lite': {
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
-    apiKeyEnv: 'GOOGLE_API_KEY',
-    modelId: 'gemini-3.1-flash-lite',
+  "gemini-3.1-flash-lite": {
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+    apiKeyEnv: "GOOGLE_API_KEY",
+    modelId: "gemini-3.1-flash-lite",
   },
-  'step-3.7-flash': {
-    baseUrl: 'https://integrate.api.nvidia.com/v1',
-    apiKeyEnv: 'NVIDIA_API_KEY',
-    modelId: 'stepfun-ai/step-3.7-flash',
+  "step-3.7-flash": {
+    baseUrl: "https://integrate.api.nvidia.com/v1",
+    apiKeyEnv: "NVIDIA_API_KEY",
+    modelId: "stepfun-ai/step-3.7-flash",
   },
-  'glm-5.1': {
-    baseUrl: 'https://integrate.api.nvidia.com/v1',
-    apiKeyEnv: 'NVIDIA_API_KEY',
-    modelId: 'z-ai/glm-5.1',
+  "glm-5.1": {
+    baseUrl: "https://integrate.api.nvidia.com/v1",
+    apiKeyEnv: "NVIDIA_API_KEY",
+    modelId: "z-ai/glm-5.1",
   },
 };
 
@@ -40,7 +39,7 @@ If this is the first response of a new session (no previous AI messages in histo
 
 RESPONSE GUIDELINES (Inside <final>):
 1. CHAT MODE (Default): Use plain text for conversational replies.
-2. NOTE MODE: Provide well-structured study notes using markdown. To help the frontend, start your response with a JSON-like header if possible, or simply use a clear structure. 
+2. NOTE MODE: Provide well-structured study notes using markdown. To help the frontend, start your response with a JSON-like header if possible, or simply use a clear structure.
    Recommended format for Notes:
    { "type": "notes", "text": "Markdown content here...", "summary": "Short summary" }
 3. QUIZ MODE: You MUST use JSON format so the frontend can render the quiz interface.
@@ -99,34 +98,36 @@ function isPrivateIp(hostname) {
  * @param {string} baseUrl - The URL to validate.
  */
 function validateApiUrl(baseUrl) {
-  if (!baseUrl || typeof baseUrl !== 'string') {
-    throw new Error('Invalid URL: empty or not a string');
+  if (!baseUrl || typeof baseUrl !== "string") {
+    throw new Error("Invalid URL: empty or not a string");
   }
   if (baseUrl.length > 500) {
-    throw new Error('Invalid URL: exceeds 500 character limit');
+    throw new Error("Invalid URL: exceeds 500 character limit");
   }
-  if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
-    throw new Error('Invalid URL: must start with http:// or https://');
+  if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
+    throw new Error("Invalid URL: must start with http:// or https://");
   }
   try {
     const url = new URL(baseUrl);
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
       throw new Error(`Invalid URL: protocol "${url.protocol}" not allowed`);
     }
     // Block private/internal IPs in production to prevent SSRF
-    if (process.env.NODE_ENV === 'production' && isPrivateIp(url.hostname)) {
-      throw new Error('Invalid URL: private/internal addresses are not allowed');
+    if (process.env.NODE_ENV === "production" && isPrivateIp(url.hostname)) {
+      throw new Error(
+        "Invalid URL: private/internal addresses are not allowed",
+      );
     }
   } catch (err) {
     if (
-      err.message.includes('not allowed') ||
-      err.message.includes('exceeds') ||
-      err.message.includes('empty') ||
-      err.message.includes('private/internal')
+      err.message.includes("not allowed") ||
+      err.message.includes("exceeds") ||
+      err.message.includes("empty") ||
+      err.message.includes("private/internal")
     ) {
       throw err;
     }
-    throw new Error('Invalid URL: malformed address');
+    throw new Error("Invalid URL: malformed address", { cause: err });
   }
 }
 
@@ -135,18 +136,18 @@ function validateApiUrl(baseUrl) {
  * @param {string} modelId - The model ID to validate.
  */
 function validateModelId(modelId) {
-  if (!modelId || typeof modelId !== 'string') {
-    throw new Error('Invalid model ID: empty or not a string');
+  if (!modelId || typeof modelId !== "string") {
+    throw new Error("Invalid model ID: empty or not a string");
   }
   if (modelId.length > 200) {
-    throw new Error('Invalid model ID: exceeds 200 character limit');
+    throw new Error("Invalid model ID: exceeds 200 character limit");
   }
   if (/\s/.test(modelId)) {
-    throw new Error('Model ID cannot contain spaces');
+    throw new Error("Model ID cannot contain spaces");
   }
   // eslint-disable-next-line no-control-regex
   if (/[\x00-\x1f]/.test(modelId)) {
-    throw new Error('Model ID contains invalid characters');
+    throw new Error("Model ID contains invalid characters");
   }
 }
 
@@ -155,7 +156,7 @@ function validateModelId(modelId) {
  */
 const timeoutPromise = (ms) =>
   new Promise((_, reject) =>
-    setTimeout(() => reject(new Error("AI_TIMEOUT")), ms)
+    setTimeout(() => reject(new Error("AI_TIMEOUT")), ms),
   );
 
 /**
@@ -173,13 +174,13 @@ async function callOpenAICompatibleAPI(config, message, history) {
   } else if (config.apiKeyEnv) {
     apiKey = process.env[config.apiKeyEnv];
   } else {
-    apiKey = '';
+    apiKey = "";
   }
 
   // Convert SDK history format [{role, parts: [{text}]}] to OpenAI format [{role, content}]
   const messages = [
     { role: "system", content: SYSTEM_PROMPT },
-    ...history.map(msg => ({
+    ...history.map((msg) => ({
       role: msg.role === "model" ? "assistant" : "user",
       content: msg.parts?.[0]?.text || "",
     })),
@@ -209,7 +210,9 @@ async function callOpenAICompatibleAPI(config, message, history) {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(`API Error (${response.status}): ${errorData.error?.message || response.statusText}`);
+    throw new Error(
+      `API Error (${response.status}): ${errorData.error?.message || response.statusText}`,
+    );
   }
 
   const data = await response.json();
@@ -224,14 +227,19 @@ async function callOpenAICompatibleAPI(config, message, history) {
  * @param {Object} [customModelConfig] - Optional custom model config (for local/user-provided LLMs).
  * @returns {Promise<string>} - The raw text response from the AI.
  */
-export async function handleChat(message, history, modelId, customModelConfig = null) {
+export async function handleChat(
+  message,
+  history,
+  modelId,
+  customModelConfig = null,
+) {
   // If a custom model config is provided, use it directly (bypass MODEL_CONFIGS)
   if (customModelConfig) {
     validateModelId(customModelConfig.modelId);
     const config = {
-      baseUrl: customModelConfig.baseUrl.replace(/\/+$/, ''), // strip trailing slash
+      baseUrl: customModelConfig.baseUrl.replace(/\/+$/, ""), // strip trailing slash
       modelId: customModelConfig.modelId,
-      apiKey: customModelConfig.apiKey || '',
+      apiKey: customModelConfig.apiKey || "",
     };
 
     // SEC-011: Only send history if user has explicitly consented via sendHistory toggle
@@ -251,7 +259,9 @@ export async function handleChat(message, history, modelId, customModelConfig = 
     } catch (error) {
       console.error(`[AI] Custom Model Error:`, error.message || error);
       if (error.message === "AI_TIMEOUT") {
-        const timeoutError = new Error("The AI is taking too long to respond. Please try again.");
+        const timeoutError = new Error(
+          "The AI is taking too long to respond. Please try again.",
+        );
         timeoutError.cause = error;
         throw timeoutError;
       }
@@ -260,8 +270,8 @@ export async function handleChat(message, history, modelId, customModelConfig = 
   }
 
   // Default to gemini-3.1-flash-lite if no modelId is provided
-  const effectiveModelId = modelId || 'gemini-3.1-flash-lite';
-  
+  const effectiveModelId = modelId || "gemini-3.1-flash-lite";
+
   const config = MODEL_CONFIGS[effectiveModelId];
   if (!config) {
     throw new Error(`Unsupported model ID: ${effectiveModelId}`);
@@ -279,13 +289,17 @@ export async function handleChat(message, history, modelId, customModelConfig = 
 
     return responseText;
   } catch (error) {
-    console.error(`[AI] Provider Error (${effectiveModelId}):`, error.message || error);
+    console.error(
+      `[AI] Provider Error (${effectiveModelId}):`,
+      error.message || error,
+    );
     if (error.message === "AI_TIMEOUT") {
-      const timeoutError = new Error("The AI is taking too long to respond. Please try again.");
+      const timeoutError = new Error(
+        "The AI is taking too long to respond. Please try again.",
+      );
       timeoutError.cause = error;
       throw timeoutError;
     }
     throw error;
   }
 }
-
