@@ -12,6 +12,7 @@ export function useChat({
   setCurrentSessionId,
   sessions,
   setSaveStatus,
+  renameSession,
 }) {
   const [messages, setMessages] = useState([]);
   const [history, setHistory] = useState([]);
@@ -240,7 +241,11 @@ export function useChat({
             ? title ||
               fallbackTitle ||
               (text.length > 30 ? text.substring(0, 30) + "..." : text)
-            : sessions.find((s) => s.id === currentSessionId)?.topic || "Chat";
+            : title || sessions.find((s) => s.id === currentSessionId)?.topic || "Chat";
+
+          if (title && sessionId) {
+            renameSession(sessionId, title).catch(() => {});
+          }
 
           saveSessionToDb(updatedHistory, topic, sessionId).catch(() => {
             setSaveStatus("error");
@@ -274,7 +279,11 @@ export function useChat({
           ? title ||
             fallbackTitle ||
             (text.length > 30 ? text.substring(0, 30) + "..." : text)
-          : sessions.find((s) => s.id === currentSessionId)?.topic || "Chat";
+          : title || sessions.find((s) => s.id === currentSessionId)?.topic || "Chat";
+
+        if (title && sessionId) {
+          renameSession(sessionId, title).catch(() => {});
+        }
 
         saveSessionToDb(updatedHistory, topic, sessionId).catch(() => {
           setSaveStatus("error");
@@ -307,6 +316,7 @@ export function useChat({
       startQuiz,
       getCustomModelConfig,
       setSaveStatus,
+      renameSession,
     ],
   );
 

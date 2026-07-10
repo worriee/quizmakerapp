@@ -158,7 +158,7 @@ const MainLayout = ({
             </div>
             <button
               onClick={(e) => toggleMenu(e, session.id)}
-              className="p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-[#7b9acc]/10 transition-all z-10"
+              className="p-1 rounded-md hover:bg-[#7b9acc]/10 transition-all z-10"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

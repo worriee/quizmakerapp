@@ -24,6 +24,29 @@ function stripThinkingText(text) {
     }
   }
 
+  if (isMostlyThinking(cleaned)) {
+    const paragraphs = cleaned.split(/\n\s*\n/);
+    if (paragraphs.length > 1) {
+      const nonThinking = paragraphs.filter((p) => !isMostlyThinking(p));
+      if (nonThinking.length > 0) {
+        cleaned = nonThinking.join("\n\n");
+      } else {
+        cleaned = paragraphs[paragraphs.length - 1];
+      }
+    } else {
+      const sentences = cleaned.match(/[^.!]+[.!]+/g) || [];
+      if (sentences.length > 1) {
+        const thinkingPrefixes = /^\s*(I need|I will|I should|I must|I can|Let me|The user|First,|Step \d|Since|Based on|As an|Here is|This is|To |In order|My role|I'm |I am )/i;
+        const nonThinking = sentences.filter((s) => !thinkingPrefixes.test(s));
+        if (nonThinking.length > 0) {
+          cleaned = nonThinking.join(" ");
+        } else {
+          cleaned = sentences.slice(-2).join(" ");
+        }
+      }
+    }
+  }
+
   cleaned = cleaned.replace(/^[.\s]+/, "").trim();
 
   return cleaned;
@@ -44,12 +67,26 @@ function isMostlyThinking(text) {
     /to send a friendly/i,
     /introduce my/i,
     /CHAT MODE|NOTE MODE|QUIZ MODE/i,
+    /^I(?:'m| am) an? (?:AI|assistant|language model)/i,
+    /^As an? (?:AI|assistant)/i,
+    /^I (?:must|can|cannot|don't|do not)/i,
+    /^(?:Here is|This is|Let me|First,? |Step \d+:)/i,
+    /^(?:I'll|I will) generate/i,
+    /^(?:I'm |I am )?(?:going to|about to)/i,
+    /^(?:Since|Because|Based on) (?:no|the|your|my)/i,
+    /^(?:To |In order to |For this)/i,
+    /The user (?:is asking|wants|provided|sent|said)/i,
+    /I should (?:provide|give|respond|answer|explain)/i,
+    /Let me (?:explain|break down|think|analyze|consider)/i,
   ];
 
   let matchCount = 0;
   for (const pattern of thinkingIndicators) {
     if (pattern.test(text)) matchCount++;
   }
+
+  const firstLine = text.split("\n")[0];
+  if (firstLine.length > 50 && /^[\w\s,;:.!?]+$/.test(firstLine)) matchCount++;
 
   return matchCount >= 2;
 }
@@ -101,6 +138,99 @@ export function generateTitle(message) {
   return title.length >= 3 ? title : "New Chat";
 }
 
+function normalizeOutput(text) {
+  if (!text) return "";
+
+  text = text
+    .replace(/\\n/g, "\n")
+    .replace(/\\t/g, "\t")
+    .replace(/\\r/g, "");
+
+  text = text
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+
+  text = text.replace(/([^\n])\n(#{1,6}\s)/g, "$1\n\n$2");
+
+  text = text.replace(/(#{1,6})([^\s#])/g, "$1 $2");
+
+  text = text.replace(/([^\n])\n(- )/g, "$1\n\n$2");
+
+  text = text.replace(/\n{3,}/g, "\n\n");
+
+  text = text.replace(/[ \t]+$/gm, "");
+
+  return text.trim();
+}
+
+function extractAllTags(raw) {
+  const tags = [];
+  const anyTagRegex =
+    /<\s*([a-zA-Z_][\w-]*)\s*>([\s\S]*?)<\s*\/\s*\1\s*>/gi;
+  let match;
+  while ((match = anyTagRegex.exec(raw)) !== null) {
+    tags.push({
+      name: match[1].toLowerCase(),
+      content: match[2].trim(),
+      fullMatch: match[0],
+    });
+  }
+  return tags;
+}
+
+function classifyTag(name) {
+  if (name === "title") return "title";
+  if (name === "final" || name === "output" || name === "response" || name === "answer")
+    return "final";
+  if (
+    /^(think|though|reason|analysis|scratchpad|internal|reflection|meta|chain_of_thought|cot)$/i.test(
+      name,
+    ) ||
+    /think|thought|reason/i.test(name)
+  )
+    return "thought";
+  return "other";
+}
+
+function selectContent(tags, rawText) {
+  let title = "";
+  let thought = "";
+  let final = "";
+
+  for (const tag of tags) {
+    const type = classifyTag(tag.name);
+    if (type === "title" && !title) {
+      title = tag.content;
+    } else if (type === "thought" && !thought) {
+      thought = tag.content;
+    } else if (type === "final" && !final) {
+      final = tag.content;
+    }
+  }
+
+  if (!final && tags.length > 0) {
+    let remaining = rawText;
+    for (const tag of tags) {
+      remaining = remaining.replace(tag.fullMatch, "");
+    }
+    remaining = remaining.replace(/\s*<\s*\/?\s*[a-zA-Z_][\w-]*\s*[^>]*>\s*/g, "");
+    final = remaining.trim();
+  }
+
+  return { title, thought, final };
+}
+
+function stripAllHtmlTags(text) {
+  if (!text) return "";
+  return text.replace(
+    /<\s*\/?\s*[a-zA-Z_][a-zA-Z0-9_-]*\s*[^>]*>/g,
+    "",
+  );
+}
+
 export function parseAIResponse(raw) {
   if (!raw) {
     return {
@@ -110,36 +240,84 @@ export function parseAIResponse(raw) {
     };
   }
 
-  const titleMatch = raw.match(/<title>([\s\S]*?)<\/title>/);
-  const thoughtMatch = raw.match(/<thought>([\s\S]*?)<\/thought>/);
-  const finalMatch = raw.match(/<final>([\s\S]*?)<\/final>/);
+  // JSON mode first — models that support response_format output
+  // pure JSON with no tags. Check before tag parsing for O(1) fast path.
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object") {
+      // Chat response from JSON mode: { title, thought, content }
+      if (typeof parsed.content === "string") {
+        return {
+          title: parsed.title ? trimTitle(parsed.title) : "",
+          thought: parsed.thought || "",
+          final: normalizeOutput(parsed.content),
+          fallbackTitle: "",
+          structured: {},
+        };
+      }
+      // Quiz/notes response from JSON mode: { type, text, options, ... }
+      if (parsed.type === "quiz" || parsed.type === "notes") {
+        return {
+          title: parsed.title ? trimTitle(parsed.title) : "",
+          thought: parsed.thought || "",
+          final: parsed.text || "",
+          fallbackTitle: "",
+          structured: parsed,
+        };
+      }
+    }
+  } catch {
+    // Not valid JSON — continue to tag-based parser
+  }
 
-  let title = titleMatch ? trimTitle(titleMatch[1]) : "";
-  const thought = thoughtMatch ? thoughtMatch[1].trim() : "";
-  let final = finalMatch ? finalMatch[1].trim() : "";
+  // Extract tags from raw text BEFORE normalizeOutput (which would
+  // corrupt escape sequences like \n inside JSON strings inside tags)
+  const tags = extractAllTags(raw);
 
-  if (!title) {
-    const titleLineMatch = raw.match(/Title\s*:\s*([^\n]+)/i);
-    if (titleLineMatch) {
-      title = trimTitle(titleLineMatch[1]);
+  let title = "";
+  let thought = "";
+  let final = "";
+  let structured;
+  let jsonParsed = false;
+
+  if (tags.length > 0) {
+    const selected = selectContent(tags, raw);
+    title = trimTitle(selected.title);
+    thought = selected.thought;
+    final = selected.final;
+
+    // Try parsing final as JSON first — avoid normalizeOutput corrupting
+    // escape sequences like \n inside JSON strings
+    try {
+      const parsed = JSON.parse(final);
+      if (parsed && typeof parsed === "object") {
+        structured = parsed;
+        final = parsed.content || parsed.text || final;
+        jsonParsed = true;
+      }
+    } catch {
+      // not JSON — run text cleanup instead
+    }
+
+    if (!jsonParsed) {
+      final = stripAllHtmlTags(final);
+      final = normalizeOutput(final);
     }
   }
 
   if (!final) {
-    const remainingText = raw
-      .replace(/<thought>[\s\S]*?<\/thought>/g, "")
-      .replace(/<final>|<\/final>/g, "")
-      .trim();
+    const remainingText = stripAllHtmlTags(normalizeOutput(raw)).trim();
 
-    if (remainingText.startsWith("{") && remainingText.endsWith("}")) {
+    const jsonMatch = remainingText.match(
+      /\{[\s\S]*?"type"\s*:\s*"(notes|quiz)"[\s\S]*?\}/,
+    );
+    if (jsonMatch) {
       try {
-        const parsed = JSON.parse(remainingText);
-        if (
-          parsed &&
-          typeof parsed === "object" &&
-          (parsed.type === "notes" || parsed.type === "quiz")
-        ) {
-          final = remainingText;
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed && typeof parsed === "object") {
+          if (parsed.type === "quiz" || parsed.type === "notes") {
+            final = jsonMatch[0];
+          }
         }
       } catch {
         // not valid JSON
@@ -151,14 +329,26 @@ export function parseAIResponse(raw) {
     }
   }
 
-  const tagRegex = /<\/?(?:thought|final|title)\s*\/?>/gi;
-  final = final.replace(tagRegex, "").trim();
-
-  if (!thoughtMatch && isMostlyThinking(final)) {
-    final = stripThinkingText(final);
+  if (!title) {
+    const tagTitleMatch = tags.find((t) => t.name === "title");
+    if (tagTitleMatch) {
+      title = trimTitle(tagTitleMatch.content);
+    }
   }
 
-  if (!thoughtMatch && title && isMostlyThinking(title)) {
+  if (!title) {
+    const titleLineMatch = normalizeOutput(raw).match(/Title\s*:\s*([^\n]+)/i);
+    if (titleLineMatch) {
+      title = trimTitle(titleLineMatch[1]);
+    }
+  }
+
+  if (!tags.length && !tags.some((t) => classifyTag(t.name) === "thought") && isMostlyThinking(final)) {
+    const stripped = stripThinkingText(final);
+    final = normalizeOutput(stripped);
+  }
+
+  if (!tags.length && title && isMostlyThinking(title)) {
     title = "";
   }
 
@@ -175,15 +365,19 @@ export function parseAIResponse(raw) {
     }
   }
 
-  let structured = {};
-  try {
-    const parsed = JSON.parse(final);
-    if (parsed && typeof parsed === "object") {
-      structured = parsed;
+  if (!jsonParsed) {
+    structured = {};
+    try {
+      const parsed = JSON.parse(final);
+      if (parsed && typeof parsed === "object") {
+        structured = parsed;
+      }
+    } catch {
+      // not JSON
     }
-  } catch {
-    // not JSON
   }
+
+  if (!structured) structured = {};
 
   return {
     title,

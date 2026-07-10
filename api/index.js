@@ -81,10 +81,10 @@ sessionRouter.get("/", authenticate, async (req, res) => {
   }
 });
 
-// GET /api/session/:id - get a single session
+// GET /api/session/:id - get a single session (reads from messages table)
 sessionRouter.get("/:id", authenticate, async (req, res) => {
   try {
-    const { data, error } = await supabaseService
+    const { data: session, error } = await supabaseService
       .from("chat_sessions")
       .select("*")
       .eq("id", req.params.id)
@@ -92,14 +92,31 @@ sessionRouter.get("/:id", authenticate, async (req, res) => {
       .single();
 
     if (error) throw error;
-    res.json({ session: data });
+
+    // Load messages from the new table instead of the history blob
+    const { data: messageRows } = await supabaseService
+      .from("messages")
+      .select("*")
+      .eq("session_id", req.params.id)
+      .order("position", { ascending: true });
+
+    // Convert to the SDK format that useChat.loadSessionData expects
+    const history = (messageRows || []).map((row) => ({
+      role: row.role,
+      parts: [{ text: row.content }],
+    }));
+
+    // Overwrite session.history with data from messages table
+    session.history = history;
+
+    res.json({ session });
   } catch (error) {
     console.error("[Session] Get error:", error.message || error);
     res.status(500).json({ error: error.message || "Failed to fetch session" });
   }
 });
 
-// POST /api/session/create - create a new session
+// POST /api/session/create - create a new session (dual-write)
 sessionRouter.post("/create", authenticate, async (req, res) => {
   try {
     const { topic, history } = req.body;
@@ -114,13 +131,26 @@ sessionRouter.post("/create", authenticate, async (req, res) => {
         {
           user_id: req.user.id,
           topic: topic || "New Chat",
-          history: history || [],
         },
       ])
       .select();
 
     if (error) throw error;
-    res.status(201).json({ session: data[0] });
+    const session = data[0];
+
+    // Dual-write: insert into messages table if history exists
+    if (history && history.length > 0) {
+      const rowsToInsert = history.map((msg, index) => ({
+        session_id: session.id,
+        role: msg.role,
+        content: msg.parts[0].text,
+        position: index,
+      }));
+
+      await supabaseService.from("messages").insert(rowsToInsert);
+    }
+
+    res.status(201).json({ session });
   } catch (error) {
     console.error("[Session] Create error:", error.message || error);
     res
@@ -129,19 +159,34 @@ sessionRouter.post("/create", authenticate, async (req, res) => {
   }
 });
 
-// POST /api/session/:id/update - update session history/topic
+// POST /api/session/:id/update - update session history/topic (dual-write)
 sessionRouter.post("/:id/update", authenticate, async (req, res) => {
   try {
     const { history, topic } = req.body;
 
     const { data, error } = await supabaseService
       .from("chat_sessions")
-      .update({ history, topic })
+      .update({ topic })
       .eq("id", req.params.id)
       .eq("user_id", req.user.id)
       .select();
 
     if (error) throw error;
+
+    // Dual-write: replace all messages for this session
+    if (history && Array.isArray(history)) {
+      await supabaseService.from("messages").delete().eq("session_id", req.params.id);
+
+      const rowsToInsert = history.map((msg, index) => ({
+        session_id: req.params.id,
+        role: msg.role,
+        content: msg.parts[0].text,
+        position: index,
+      }));
+
+      await supabaseService.from("messages").insert(rowsToInsert);
+    }
+
     res.json({ session: data[0] });
   } catch (error) {
     console.error("[Session] Update error:", error.message || error);
@@ -220,6 +265,76 @@ sessionRouter.delete("/:id", authenticate, async (req, res) => {
     res
       .status(500)
       .json({ error: error.message || "Failed to delete session" });
+  }
+});
+
+// ---- Phase 1: Message routes (dual-write support) ----
+
+// POST /api/messages/bulk - batch insert messages for a session
+sessionRouter.post("/messages/bulk", authenticate, async (req, res) => {
+  try {
+    const { sessionId, messages: msgs } = req.body;
+
+    if (!sessionId || !Array.isArray(msgs) || msgs.length === 0) {
+      return res.status(400).json({ error: "sessionId and messages array required" });
+    }
+
+    // Verify the session belongs to this user
+    const { data: session } = await supabaseService
+      .from("chat_sessions")
+      .select("id")
+      .eq("id", sessionId)
+      .eq("user_id", req.user.id)
+      .single();
+
+    if (!session) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+
+    // Delete old messages, then re-insert all
+    await supabaseService.from("messages").delete().eq("session_id", sessionId);
+
+    const rowsToInsert = msgs.map((msg, index) => ({
+      session_id: sessionId,
+      role: msg.role,
+      content: msg.parts[0].text,
+      position: index,
+    }));
+
+    const { data, error } = await supabaseService
+      .from("messages")
+      .insert(rowsToInsert)
+      .select();
+
+    if (error) throw error;
+    res.json({ count: data.length });
+  } catch (error) {
+    console.error("[Messages] Bulk insert error:", error.message || error);
+    res.status(500).json({ error: error.message || "Failed to save messages" });
+  }
+});
+
+// GET /api/messages/:sessionId - load all messages for a session
+sessionRouter.get("/messages/:sessionId", authenticate, async (req, res) => {
+  try {
+    const { data, error } = await supabaseService
+      .from("messages")
+      .select("*")
+      .eq("session_id", req.params.sessionId)
+      .order("position", { ascending: true });
+
+    if (error) throw error;
+
+    // Convert to the SDK format the frontend expects
+    const history = (data || []).map((row) => ({
+      role: row.role,
+      parts: [{ text: row.content }],
+    }));
+
+    res.json({ messages: data || [], history });
+  } catch (error) {
+    console.error("[Messages] Get error:", error.message || error);
+    res.status(500).json({ error: error.message || "Failed to fetch messages" });
   }
 });
 
