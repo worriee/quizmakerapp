@@ -34,7 +34,7 @@ const markdownComponents = {
 };
 
 /** ChatInterface Component: primary chat UI with markdown and quiz rendering. */
-const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
+const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz, onStopGenerating }) => {
   const [input, setInput] = useState("");
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -60,6 +60,9 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
       handleSubmit(e);
     }
   };
+
+  const isStreaming =
+    messages.length > 0 && messages[messages.length - 1]?.isStreaming;
 
   return (
     <div className="flex flex-col h-full min-h-0 text-app">
@@ -91,33 +94,35 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
                     <div className="text-sm">{msg.text}</div>
                   ) : (
                     <div className="prose prose-sm max-w-none break-words text-app leading-relaxed">
-                      <ReactMarkdown
-                        rehypePlugins={[rehypeSanitize]}
-                        components={markdownComponents}
-                      >
-                        {msg.text}
-                      </ReactMarkdown>
+                      {msg.isStreaming ? (
+                        msg.text ? (
+                          <>
+                            <span className="whitespace-pre-wrap">{msg.text}</span>
+                            <span className="animate-pulse ml-0.5">|</span>
+                          </>
+                        ) : (
+                          <span className="animate-pulse">|</span>
+                        )
+                      ) : (
+                        <ReactMarkdown
+                          rehypePlugins={[rehypeSanitize]}
+                          components={markdownComponents}
+                        >
+                          {msg.text}
+                        </ReactMarkdown>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
             ))}
-            {isLoading && (
+            {isLoading && !isStreaming && (
               <div className="flex justify-start">
                 <div className="bg-app text-app border border-app rounded-2xl rounded-bl-sm px-5 py-3">
                   <div className="flex items-center gap-2">
-                    <div
-                      className="w-2 h-2 bg-[#7b9acc] rounded-full animate-bounce"
-                      style={{ animationDelay: "0ms" }}
-                    />
-                    <div
-                      className="w-2 h-2 bg-[#7b9acc] rounded-full animate-bounce"
-                      style={{ animationDelay: "150ms" }}
-                    />
-                    <div
-                      className="w-2 h-2 bg-[#7b9acc] rounded-full animate-bounce"
-                      style={{ animationDelay: "300ms" }}
-                    />
+                    <div className="w-2 h-2 bg-[#7b9acc] rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <div className="w-2 h-2 bg-[#7b9acc] rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <div className="w-2 h-2 bg-[#7b9acc] rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                   </div>
                 </div>
               </div>
@@ -137,7 +142,8 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
             onKeyDown={handleKeyDown}
             placeholder="Ask TUON AI anything..."
             rows={1}
-            className="flex-1 resize-none rounded-xl border border-app bg-app-surface px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-app placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-[#7b9acc]"
+            disabled={isLoading}
+            className="flex-1 resize-none rounded-xl border border-app bg-app-surface px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-app placeholder:text-app-muted focus:outline-none focus:ring-2 focus:ring-[#7b9acc] disabled:opacity-50"
           />
           <div className="flex flex-col gap-1.5 sm:gap-2">
             <button
@@ -148,13 +154,23 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
             >
               Quiz
             </button>
-            <button
-              type="submit"
-              disabled={isLoading || !input.trim()}
-              className="px-3 sm:px-4 py-2 rounded-xl bg-[#7b9acc] text-white text-xs sm:text-sm font-semibold hover:opacity-90 disabled:opacity-50"
-            >
-              Send
-            </button>
+            {isStreaming ? (
+              <button
+                type="button"
+                onClick={onStopGenerating}
+                className="px-3 sm:px-4 py-2 rounded-xl bg-red-500 text-white text-xs sm:text-sm font-semibold hover:bg-red-600 transition-all"
+              >
+                Cancel
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={isLoading || !input.trim()}
+                className="px-3 sm:px-4 py-2 rounded-xl bg-[#7b9acc] text-white text-xs sm:text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+              >
+                Send
+              </button>
+            )}
           </div>
         </form>
         <p className="text-center text-[10px] text-app-muted mt-2 sm:mt-3 italic">
@@ -164,5 +180,6 @@ const ChatInterface = ({ messages, onSendMessage, isLoading, onStartQuiz }) => {
     </div>
   );
 };
+
 
 export default ChatInterface;

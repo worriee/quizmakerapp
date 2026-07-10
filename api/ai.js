@@ -278,6 +278,164 @@ async function callOpenAICompatibleAPI(config, message, history, useJsonMode = f
 }
 
 /**
+ * callOpenAICompatibleAPIStream: Streaming version of callOpenAICompatibleAPI.
+ * Sends request with stream: true and writes each content chunk to the HTTP
+ * response via res.write(). Uses an idle timeout (20s of no data) instead of
+ * a wall-clock timeout.
+ * @param {Object} config - Model configuration.
+ * @param {string} message - Current user message.
+ * @param {Array} history - Chat history in SDK format.
+ * @param {boolean} useJsonMode - If true, forces JSON output via response_format.
+ * @param {Object} res - Express response object to write chunks to.
+ * @param {AbortSignal} signal - AbortSignal to cancel the fetch on client disconnect.
+ */
+async function callOpenAICompatibleAPIStream(config, message, history, useJsonMode, res, signal) {
+  let apiKey;
+  if (config.apiKey !== undefined) {
+    apiKey = config.apiKey;
+  } else if (config.apiKeyEnv) {
+    apiKey = process.env[config.apiKeyEnv];
+  } else {
+    apiKey = "";
+  }
+
+  const systemPrompt = useJsonMode ? SYSTEM_PROMPT_JSON : SYSTEM_PROMPT_TAGS;
+
+  const messages = [
+    { role: "system", content: systemPrompt },
+    ...history.map((msg) => ({
+      role: msg.role === "model" ? "assistant" : "user",
+      content: msg.parts?.[0]?.text || "",
+    })),
+    { role: "user", content: message },
+  ];
+
+  const headers = {
+    "Content-Type": "application/json",
+  };
+  if (apiKey) {
+    headers["Authorization"] = `Bearer ${apiKey}`;
+  }
+
+  validateApiUrl(config.baseUrl);
+
+  const body = {
+    model: config.modelId,
+    messages: messages,
+    temperature: 0.7,
+    stream: true,
+  };
+  if (useJsonMode) {
+    body.response_format = { type: "json_object" };
+  }
+
+  const response = await fetch(`${config.baseUrl}/chat/completions`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+    signal,
+    redirect: "error",
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      `API Error (${response.status}): ${errorData.error?.message || response.statusText}`,
+    );
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  let lastChunkTime = Date.now();
+
+  const idleTimer = setInterval(() => {
+    if (Date.now() - lastChunkTime > 20000) {
+      clearInterval(idleTimer);
+      res.write(encoder.encode("\n\n"));
+      res.end();
+    }
+  }, 5000);
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      lastChunkTime = Date.now();
+
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split("\n");
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const data = line.slice(6);
+        if (data === "[DONE]") continue;
+        try {
+          const json = JSON.parse(data);
+          const content = json.choices?.[0]?.delta?.content || "";
+          if (content) {
+            res.write(encoder.encode(content));
+          }
+        } catch {
+          // skip malformed chunks
+        }
+      }
+    }
+  } finally {
+    clearInterval(idleTimer);
+  }
+}
+
+/**
+ * handleChatStream: Wrapper that resolves the model config and calls the
+ * streaming function. Handles errors and writes them to the response.
+ */
+export async function handleChatStream(
+  message,
+  history,
+  modelId,
+  customModelConfig,
+  res,
+  signal,
+) {
+  if (customModelConfig) {
+    validateModelId(customModelConfig.modelId);
+    const config = {
+      baseUrl: customModelConfig.baseUrl.replace(/\/+$/, ""),
+      modelId: customModelConfig.modelId,
+      apiKey: customModelConfig.apiKey || "",
+    };
+    const effectiveHistory = customModelConfig.sendHistory ? history : [];
+    try {
+      await callOpenAICompatibleAPIStream(config, message, effectiveHistory, true, res, signal);
+    } catch (error) {
+      console.error(`[AI] Custom Model Stream Error:`, error.message || error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: error.message || "Stream failed" });
+      }
+    }
+    return;
+  }
+
+  const effectiveModelId = modelId || "gemini-3.1-flash-lite";
+  const config = MODEL_CONFIGS[effectiveModelId];
+  if (!config) {
+    if (!res.headersSent) {
+      res.status(400).json({ error: `Unsupported model ID: ${effectiveModelId}` });
+    }
+    return;
+  }
+
+  try {
+    await callOpenAICompatibleAPIStream(config, message, history, config.jsonMode || false, res, signal);
+  } catch (error) {
+    console.error(`[AI] Stream Error (${effectiveModelId}):`, error.message || error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message || "Stream failed" });
+    }
+  }
+}
+
+/**
  * handleChat: Manages the interaction with the AI model.
  * @param {string} message - User input.
  * @param {Array} history - Chat history.

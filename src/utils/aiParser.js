@@ -231,6 +231,56 @@ function stripAllHtmlTags(text) {
   );
 }
 
+/**
+ * streamingVisibleText: Extracts only the displayable content from
+ * partially-accumulated streaming text. Runs on every chunk to determine
+ * what the user should see DURING streaming (before full parse).
+ *
+ * Tag mode (Gemini): strips <thought>/<title>, shows content after <final>
+ *   plus extracts text/content from JSON inside <final> if present
+ * JSON mode (NVIDIA): extracts "text" (notes/quiz) or "content" (chat)
+ *   field value from partial JSON
+ * Plain text: shows everything
+ */
+export function streamingVisibleText(accumulated) {
+  if (!accumulated) return "";
+
+  // Extract content after <final> (tag mode) or use full text
+  let visible;
+  const finalStart = accumulated.lastIndexOf("<final>");
+  if (finalStart !== -1) {
+    visible = accumulated.slice(finalStart + 7).replace(/<\/?final>/g, "").trim();
+  } else {
+    // No <final> yet — strip visible structural tags
+    visible = stripAllHtmlTags(accumulated).trim();
+    if (!visible) return "";
+  }
+
+  // JSON content inside <final> (Gemini notes/quiz) or raw JSON (NVIDIA)
+  if (visible.startsWith("{")) {
+    // Try "text" first (notes/quiz format), then "content" (chat format)
+    const textMatch = visible.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)/);
+    if (textMatch) {
+      return textMatch[1]
+        .replace(/\\n/g, "\n")
+        .replace(/\\t/g, "\t")
+        .replace(/^#{1,6}\s+/gm, "");
+    }
+    const contentMatch = visible.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)/);
+    if (contentMatch) {
+      return contentMatch[1]
+        .replace(/\\n/g, "\n")
+        .replace(/\\t/g, "\t")
+        .replace(/^#{1,6}\s+/gm, "");
+    }
+    // JSON but can't extract displayable field yet — show nothing
+    return "";
+  }
+
+  // Plain text — strip any remaining tags and markdown markers
+  return stripAllHtmlTags(visible).replace(/^#{1,6}\s+/gm, "");
+}
+
 export function parseAIResponse(raw) {
   if (!raw) {
     return {

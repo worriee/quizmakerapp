@@ -2,8 +2,9 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
-import { handleChat } from "./ai.js";
+import { handleChat, handleChatStream } from "./ai.js";
 import { authRouter, supabaseService, authenticate } from "./auth.js";
+import jwt from "jsonwebtoken";
 import {
   sanitizeMessage,
   detectPromptInjection,
@@ -402,6 +403,84 @@ app.post("/api/chat", chatLimiter, authenticate, async (req, res) => {
     console.error("[Server] Internal Server Error:", error.message || error);
     const errorMessage = error.message || "An unexpected error occurred";
     res.status(500).json({ error: errorMessage });
+  }
+});
+
+/**
+ * POST /api/chat/stream
+ * Streaming SSE endpoint — chunks arrive progressively as AI generates.
+ * Uses query-param JWT auth because SSE doesn't reliably send cookies.
+ */
+app.post("/api/chat/stream", chatLimiter, async (req, res) => {
+  const token = req.query.token || req.cookies?.token;
+  if (!token) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "");
+    req.user = decoded;
+  } catch {
+    return res.status(401).json({ error: "Invalid or expired token" });
+  }
+
+  const { message, history, model, customModelConfig } = req.body;
+
+  if (!message || typeof message !== "string" || message.trim().length === 0) {
+    return res
+      .status(400)
+      .json({ error: "Message is required and must be a non-empty string" });
+  }
+
+  if (!Array.isArray(history) || history.length > 100) {
+    return res
+      .status(400)
+      .json({ error: "History must be an array with at most 100 entries" });
+  }
+
+  let cleanedMessage;
+  try {
+    cleanedMessage = sanitizeMessage(message);
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+
+  const injectionCheck = detectPromptInjection(cleanedMessage);
+  if (injectionCheck.blocked) {
+    console.warn(
+      `[Sanitize] Blocked ${injectionCheck.severity} injection: ${injectionCheck.reason}`,
+    );
+    return res
+      .status(400)
+      .json({ error: "Your message was blocked by our content policy." });
+  }
+
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive",
+    "X-Accel-Buffering": "no",
+  });
+
+  const abortController = new AbortController();
+  req.on("close", () => {
+    abortController.abort();
+  });
+
+  try {
+    await handleChatStream(
+      cleanedMessage,
+      history || [],
+      model,
+      customModelConfig,
+      res,
+      abortController.signal,
+    );
+  } catch (error) {
+    console.error("[Stream] Error:", error.message || error);
+  }
+
+  if (!res.writableEnded) {
+    res.end();
   }
 });
 

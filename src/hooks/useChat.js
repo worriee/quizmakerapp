@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { parseAIResponse } from "../utils/aiParser";
+import { parseAIResponse, streamingVisibleText } from "../utils/aiParser";
 
 const API_BASE_URL = "/api";
 
@@ -195,38 +195,43 @@ export function useChat({
           }
         }
 
-        const response = await fetch(`${API_BASE_URL}/chat`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          signal: controller.signal,
-          body: JSON.stringify({
-            message: text,
-            history: history,
-            model: selectedModel,
-            customModelConfig: getCustomModelConfig(selectedModel),
-          }),
-        });
+        // Use buffered endpoint for quiz intents (to avoid showing raw JSON mid-stream)
+        const isQuizIntent = /quiz|test|questions|\d+\s*items/i.test(text);
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`Server Error ${response.status}:`, errorText);
-          let errorMsg = `Server responded with ${response.status}`;
-          try {
-            const errorData = JSON.parse(errorText);
-            errorMsg = errorData.error || errorMsg;
-          } catch {
-            // Non-JSON response
+        if (isQuizIntent) {
+          // BUFFERED PATH — same as original behavior
+          const response = await fetch(`${API_BASE_URL}/chat`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            signal: controller.signal,
+            body: JSON.stringify({
+              message: text,
+              history: history,
+              model: selectedModel,
+              customModelConfig: getCustomModelConfig(selectedModel),
+            }),
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Server Error ${response.status}:`, errorText);
+            let errorMsg = `Server responded with ${response.status}`;
+            try {
+              const errorData = JSON.parse(errorText);
+              errorMsg = errorData.error || errorMsg;
+            } catch {
+              // Non-JSON response
+            }
+            throw new Error(errorMsg);
           }
-          throw new Error(errorMsg);
-        }
 
-        const data = await response.json();
-        const rawResponse = data.raw || "";
+          const data = await response.json();
+          const rawResponse = data.raw || "";
 
-        const { title, thought, final, fallbackTitle, structured } =
-          parseAIResponse(rawResponse);
-        const displayText = structured.text || final;
+          const { title, thought, final, fallbackTitle, structured } =
+            parseAIResponse(rawResponse);
+          const displayText = structured.text || final;
 
           if (structured.type === "quiz") {
             const updatedHistory = [
@@ -255,27 +260,161 @@ export function useChat({
               setSaveStatus("error");
             });
 
-          setView("quiz");
-          startQuiz({ itemCount: 5, difficulty: "Normal" });
+            setView("quiz");
+            startQuiz({ itemCount: 5, difficulty: "Normal" });
+            return;
+          }
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "model",
+              raw: rawResponse,
+              text: structured.text || displayText,
+              thought: thought,
+              ...structured,
+              ...data,
+            },
+          ]);
+
+          const updatedHistory = [
+            ...history,
+            { role: "user", parts: [{ text }] },
+            { role: "model", parts: [{ text: rawResponse }] },
+          ];
+          setHistory(updatedHistory);
+
+          const existingChatSession = currentSessionId
+            ? sessions.find((s) => s.id === currentSessionId)
+            : null;
+          const hasRealChatTitle = existingChatSession &&
+            existingChatSession.topic &&
+            existingChatSession.topic !== "New Chat";
+
+          const topic = !currentSessionId
+            ? title ||
+              fallbackTitle ||
+              (text.length > 30 ? text.substring(0, 30) + "..." : text)
+            : hasRealChatTitle
+              ? existingChatSession.topic
+              : title || existingChatSession?.topic || "Chat";
+
+          saveSessionToDb(updatedHistory, topic, sessionId).catch(() => {
+            setSaveStatus("error");
+          });
           return;
         }
 
+        // STREAMING PATH
+        const token = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("token="))
+          ?.split("=")[1];
+
+        const response = await fetch(
+          `${API_BASE_URL}/chat/stream?token=${encodeURIComponent(token || "")}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            signal: controller.signal,
+            body: JSON.stringify({
+              message: text,
+              history: history,
+              model: selectedModel,
+              customModelConfig: getCustomModelConfig(selectedModel),
+            }),
+          },
+        );
+
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.error || `Server responded with ${response.status}`);
+        }
+
+        // Create placeholder streaming message
         setMessages((prev) => [
           ...prev,
-          {
-            role: "model",
-            raw: rawResponse,
-            text: structured.text || displayText,
-            thought: thought,
-            ...structured,
-            ...data,
-          },
+          { role: "model", text: "", type: "text", isStreaming: true },
         ]);
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let accumulatedText = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          accumulatedText += chunk;
+
+          setMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = {
+              ...updated[updated.length - 1],
+              text: streamingVisibleText(accumulatedText),
+              isStreaming: true,
+            };
+            return updated;
+          });
+        }
+
+        // Stream ended — parse full response
+        const { title, thought, final, fallbackTitle, structured } =
+          parseAIResponse(accumulatedText);
+        const displayText = structured.text || final;
+
+        if (structured.type === "quiz") {
+          setMessages((prev) => prev.slice(0, -1));
+          setQuizData(structured);
+          setView("quiz");
+
+          const updatedHistory = [
+            ...history,
+            { role: "user", parts: [{ text }] },
+            { role: "model", parts: [{ text: accumulatedText }] },
+          ];
+          setHistory(updatedHistory);
+
+          const existingQuizSession = currentSessionId
+            ? sessions.find((s) => s.id === currentSessionId)
+            : null;
+          const hasRealQuizTitle = existingQuizSession &&
+            existingQuizSession.topic &&
+            existingQuizSession.topic !== "New Chat";
+
+          const topic = !currentSessionId
+            ? title ||
+              fallbackTitle ||
+              (text.length > 30 ? text.substring(0, 30) + "..." : text)
+            : hasRealQuizTitle
+              ? existingQuizSession.topic
+              : title || existingQuizSession?.topic || "Chat";
+
+          saveSessionToDb(updatedHistory, topic, sessionId).catch(() => {
+            setSaveStatus("error");
+          });
+          return;
+        }
+
+        // Finalize the streaming message
+        setMessages((prev) => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            role: "model",
+            raw: accumulatedText,
+            text: displayText,
+            thought: thought,
+            isStreaming: false,
+            ...structured,
+          };
+          return updated;
+        });
 
         const updatedHistory = [
           ...history,
           { role: "user", parts: [{ text }] },
-          { role: "model", parts: [{ text: rawResponse }] },
+          { role: "model", parts: [{ text: accumulatedText }] },
         ];
         setHistory(updatedHistory);
 
@@ -331,10 +470,19 @@ export function useChat({
   const stopGenerating = useCallback(() => {
     if (abortController) {
       abortController.abort();
+      setMessages((prev) => {
+        if (prev.length === 0) return prev;
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        if (last?.isStreaming) {
+          updated[updated.length - 1] = { ...last, isStreaming: false };
+        }
+        return updated;
+      });
       setIsLoading(false);
       setAbortController(null);
     }
-  }, [abortController]);
+  }, [abortController, setMessages]);
 
   const newChat = useCallback(() => {
     setMessages([]);
