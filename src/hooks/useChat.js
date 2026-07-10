@@ -12,7 +12,6 @@ export function useChat({
   setCurrentSessionId,
   sessions,
   setSaveStatus,
-  renameSession,
 }) {
   const [messages, setMessages] = useState([]);
   const [history, setHistory] = useState([]);
@@ -229,27 +228,32 @@ export function useChat({
           parseAIResponse(rawResponse);
         const displayText = structured.text || final;
 
-        if (structured.type === "quiz") {
-          const updatedHistory = [
-            ...history,
-            { role: "user", parts: [{ text }] },
-            { role: "model", parts: [{ text: rawResponse }] },
-          ];
-          setHistory(updatedHistory);
+          if (structured.type === "quiz") {
+            const updatedHistory = [
+              ...history,
+              { role: "user", parts: [{ text }] },
+              { role: "model", parts: [{ text: rawResponse }] },
+            ];
+            setHistory(updatedHistory);
 
-          const topic = !currentSessionId
-            ? title ||
-              fallbackTitle ||
-              (text.length > 30 ? text.substring(0, 30) + "..." : text)
-            : title || sessions.find((s) => s.id === currentSessionId)?.topic || "Chat";
+            const existingQuizSession = currentSessionId
+              ? sessions.find((s) => s.id === currentSessionId)
+              : null;
+            const hasRealQuizTitle = existingQuizSession &&
+              existingQuizSession.topic &&
+              existingQuizSession.topic !== "New Chat";
 
-          if (title && sessionId) {
-            renameSession(sessionId, title).catch(() => {});
-          }
+            const topic = !currentSessionId
+              ? title ||
+                fallbackTitle ||
+                (text.length > 30 ? text.substring(0, 30) + "..." : text)
+              : hasRealQuizTitle
+                ? existingQuizSession.topic
+                : title || existingQuizSession?.topic || "Chat";
 
-          saveSessionToDb(updatedHistory, topic, sessionId).catch(() => {
-            setSaveStatus("error");
-          });
+            saveSessionToDb(updatedHistory, topic, sessionId).catch(() => {
+              setSaveStatus("error");
+            });
 
           setView("quiz");
           startQuiz({ itemCount: 5, difficulty: "Normal" });
@@ -275,15 +279,20 @@ export function useChat({
         ];
         setHistory(updatedHistory);
 
+        const existingChatSession = currentSessionId
+          ? sessions.find((s) => s.id === currentSessionId)
+          : null;
+        const hasRealChatTitle = existingChatSession &&
+          existingChatSession.topic &&
+          existingChatSession.topic !== "New Chat";
+
         const topic = !currentSessionId
           ? title ||
             fallbackTitle ||
             (text.length > 30 ? text.substring(0, 30) + "..." : text)
-          : title || sessions.find((s) => s.id === currentSessionId)?.topic || "Chat";
-
-        if (title && sessionId) {
-          renameSession(sessionId, title).catch(() => {});
-        }
+          : hasRealChatTitle
+            ? existingChatSession.topic
+            : title || existingChatSession?.topic || "Chat";
 
         saveSessionToDb(updatedHistory, topic, sessionId).catch(() => {
           setSaveStatus("error");
@@ -316,7 +325,6 @@ export function useChat({
       startQuiz,
       getCustomModelConfig,
       setSaveStatus,
-      renameSession,
     ],
   );
 

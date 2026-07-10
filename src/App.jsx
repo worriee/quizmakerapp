@@ -72,7 +72,6 @@ function App() {
     setCurrentSessionId,
     sessions,
     setSaveStatus,
-    renameSession,
   });
 
   // 5. Restore active session (for boot + sidebar clicks)
