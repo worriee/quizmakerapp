@@ -35,8 +35,10 @@ const authLimiter = rateLimit({
 
 const MODEL_RPM_LIMITS = {
   "gemini-3.1-flash-lite": 15,
+  "gemma-4-26b-a4b": 15,
+  "gemma-4-31b": 15,
   "step-3.7-flash": 40,
-  "glm-5.1": 40,
+  "minimax-m2.7": 40,
 };
 const DEFAULT_RPM = 20;
 
@@ -176,7 +178,10 @@ sessionRouter.post("/:id/update", authenticate, async (req, res) => {
 
     // Dual-write: replace all messages for this session
     if (history && Array.isArray(history)) {
-      await supabaseService.from("messages").delete().eq("session_id", req.params.id);
+      await supabaseService
+        .from("messages")
+        .delete()
+        .eq("session_id", req.params.id);
 
       const rowsToInsert = history.map((msg, index) => ({
         session_id: req.params.id,
@@ -277,7 +282,9 @@ sessionRouter.post("/messages/bulk", authenticate, async (req, res) => {
     const { sessionId, messages: msgs } = req.body;
 
     if (!sessionId || !Array.isArray(msgs) || msgs.length === 0) {
-      return res.status(400).json({ error: "sessionId and messages array required" });
+      return res
+        .status(400)
+        .json({ error: "sessionId and messages array required" });
     }
 
     // Verify the session belongs to this user
@@ -335,7 +342,9 @@ sessionRouter.get("/messages/:sessionId", authenticate, async (req, res) => {
     res.json({ messages: data || [], history });
   } catch (error) {
     console.error("[Messages] Get error:", error.message || error);
-    res.status(500).json({ error: error.message || "Failed to fetch messages" });
+    res
+      .status(500)
+      .json({ error: error.message || "Failed to fetch messages" });
   }
 });
 
@@ -457,7 +466,7 @@ app.post("/api/chat/stream", chatLimiter, async (req, res) => {
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
-    "Connection": "keep-alive",
+    Connection: "keep-alive",
     "X-Accel-Buffering": "no",
   });
 

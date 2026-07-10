@@ -7,16 +7,28 @@ const MODEL_CONFIGS = {
     modelId: "gemini-3.1-flash-lite",
     jsonMode: false,
   },
+  "gemma-4-31b": {
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+    apiKeyEnv: "GOOGLE_API_KEY",
+    modelId: "gemma-4-31b-it",
+    jsonMode: false,
+  },
+  "gemma-4-26b-a4b": {
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+    apiKeyEnv: "GOOGLE_API_KEY",
+    modelId: "gemma-4-26b-a4b-it",
+    jsonMode: false,
+  },
   "step-3.7-flash": {
     baseUrl: "https://integrate.api.nvidia.com/v1",
     apiKeyEnv: "NVIDIA_API_KEY",
     modelId: "stepfun-ai/step-3.7-flash",
     jsonMode: true,
   },
-  "glm-5.1": {
+  "minimax-m2.7": {
     baseUrl: "https://integrate.api.nvidia.com/v1",
     apiKeyEnv: "NVIDIA_API_KEY",
-    modelId: "z-ai/glm-5.1",
+    modelId: "minimaxai/minimax-m2.7",
     jsonMode: true,
   },
 };
@@ -217,7 +229,12 @@ const timeoutPromise = (ms) =>
  * @param {boolean} [useJsonMode=false] - If true, forces JSON output via response_format.
  * @returns {Promise<string>} - The raw text response.
  */
-async function callOpenAICompatibleAPI(config, message, history, useJsonMode = false) {
+async function callOpenAICompatibleAPI(
+  config,
+  message,
+  history,
+  useJsonMode = false,
+) {
   // Resolve API key: inline key takes precedence, then env variable, then empty
   let apiKey;
   if (config.apiKey !== undefined) {
@@ -289,7 +306,14 @@ async function callOpenAICompatibleAPI(config, message, history, useJsonMode = f
  * @param {Object} res - Express response object to write chunks to.
  * @param {AbortSignal} signal - AbortSignal to cancel the fetch on client disconnect.
  */
-async function callOpenAICompatibleAPIStream(config, message, history, useJsonMode, res, signal) {
+async function callOpenAICompatibleAPIStream(
+  config,
+  message,
+  history,
+  useJsonMode,
+  res,
+  signal,
+) {
   let apiKey;
   if (config.apiKey !== undefined) {
     apiKey = config.apiKey;
@@ -406,7 +430,14 @@ export async function handleChatStream(
     };
     const effectiveHistory = customModelConfig.sendHistory ? history : [];
     try {
-      await callOpenAICompatibleAPIStream(config, message, effectiveHistory, true, res, signal);
+      await callOpenAICompatibleAPIStream(
+        config,
+        message,
+        effectiveHistory,
+        true,
+        res,
+        signal,
+      );
     } catch (error) {
       console.error(`[AI] Custom Model Stream Error:`, error.message || error);
       if (!res.headersSent) {
@@ -420,15 +451,27 @@ export async function handleChatStream(
   const config = MODEL_CONFIGS[effectiveModelId];
   if (!config) {
     if (!res.headersSent) {
-      res.status(400).json({ error: `Unsupported model ID: ${effectiveModelId}` });
+      res
+        .status(400)
+        .json({ error: `Unsupported model ID: ${effectiveModelId}` });
     }
     return;
   }
 
   try {
-    await callOpenAICompatibleAPIStream(config, message, history, config.jsonMode || false, res, signal);
+    await callOpenAICompatibleAPIStream(
+      config,
+      message,
+      history,
+      config.jsonMode || false,
+      res,
+      signal,
+    );
   } catch (error) {
-    console.error(`[AI] Stream Error (${effectiveModelId}):`, error.message || error);
+    console.error(
+      `[AI] Stream Error (${effectiveModelId}):`,
+      error.message || error,
+    );
     if (!res.headersSent) {
       res.status(500).json({ error: error.message || "Stream failed" });
     }
@@ -495,7 +538,12 @@ export async function handleChat(
 
   try {
     const responseText = await Promise.race([
-      callOpenAICompatibleAPI(config, message, history, config.jsonMode || false),
+      callOpenAICompatibleAPI(
+        config,
+        message,
+        history,
+        config.jsonMode || false,
+      ),
       timeoutPromise(30000),
     ]);
 
