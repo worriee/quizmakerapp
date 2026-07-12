@@ -373,6 +373,10 @@ async function callOpenAICompatibleAPIStream(
   const encoder = new TextEncoder();
   let lastChunkTime = Date.now();
 
+  // Line buffer: accumulates partial SSE lines across chunk boundaries
+  // Prevents data loss when Render's proxy splits messages mid-line
+  let lineBuffer = "";
+
   const idleTimer = setInterval(() => {
     if (Date.now() - lastChunkTime > 20000) {
       clearInterval(idleTimer);
@@ -387,8 +391,13 @@ async function callOpenAICompatibleAPIStream(
       if (done) break;
       lastChunkTime = Date.now();
 
+      // Append new chunk to buffer and split into complete lines
       const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split("\n");
+      lineBuffer += chunk;
+      const lines = lineBuffer.split("\n");
+      // Keep the last (potentially incomplete) line in the buffer
+      lineBuffer = lines.pop() || "";
+
       for (const line of lines) {
         if (!line.startsWith("data: ")) continue;
         const data = line.slice(6);
@@ -404,6 +413,28 @@ async function callOpenAICompatibleAPIStream(
         }
       }
     }
+
+    // Process any remaining complete data in the buffer
+    if (lineBuffer.startsWith("data: ")) {
+      const data = lineBuffer.slice(6);
+      if (data !== "[DONE]") {
+        try {
+          const json = JSON.parse(data);
+          if (!json.error) {
+            const content = json.choices?.[0]?.delta?.content || "";
+            if (content) {
+              res.write(encoder.encode(content));
+            }
+          }
+        } catch {
+          // ignore trailing incomplete data
+        }
+      }
+    }
+
+    // Send end-of-stream signal — tells the client the stream is done
+    // even if Render's proxy delays the connection close
+    res.write(encoder.encode("\n\n"));
   } finally {
     clearInterval(idleTimer);
   }

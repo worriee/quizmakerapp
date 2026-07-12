@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
+import path from "path";
 import { handleChat, handleChatStream } from "./ai.js";
 import { authRouter, supabaseService, authenticate } from "./auth.js";
 import jwt from "jsonwebtoken";
@@ -12,6 +13,9 @@ import {
 } from "./sanitize.js";
 
 const app = express();
+
+// Trust Render's proxy for correct IP forwarding and streaming behavior
+app.set("trust proxy", 1);
 
 const PRODUCTION_ORIGIN =
   process.env.CORS_ORIGIN || "https://quizmakerapp.vercel.app";
@@ -24,6 +28,15 @@ app.use(
 );
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
+
+// Content-Security-Policy for Render — allows fonts, Supabase, and the service worker
+app.use((req, res, next) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; manifest-src 'self'; worker-src 'self'",
+  );
+  next();
+});
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -470,6 +483,11 @@ app.post("/api/chat/stream", chatLimiter, async (req, res) => {
     "X-Accel-Buffering": "no",
   });
 
+  // Disable Nagle's algorithm for immediate chunk delivery through Render's proxy
+  if (req.socket && typeof req.socket.setNoDelay === "function") {
+    req.socket.setNoDelay(true);
+  }
+
   const abortController = new AbortController();
   req.on("close", () => {
     abortController.abort();
@@ -491,6 +509,15 @@ app.post("/api/chat/stream", chatLimiter, async (req, res) => {
   if (!res.writableEnded) {
     res.end();
   }
+});
+
+// Serve built React frontend for Render deployment
+const __dirname = path.dirname(new URL(import.meta.url).pathname);
+app.use(express.static(path.join(__dirname, "..", "dist")));
+
+// Catch-all for client-side routing (SPA)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "dist", "index.html"));
 });
 
 export default app;

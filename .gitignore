@@ -15,7 +15,6 @@ dist-ssr
 .opencode
 AGENTS.md
 opencode.json
-server.js
 
 # Test artifacts
 test-results/
