@@ -2,11 +2,11 @@
 
 > To Understand Own Navigation.
 
-![Version](https://img.shields.io/badge/version-1.1.0-blue)
+![Version](https://img.shields.io/badge/version-2.5-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![PWA](https://img.shields.io/badge/PWA-ready-orange)
 
-**URL:** [quizmakerapp.vercel.app](https://tuonai-worrie.onrender.com)\
+**URL:** [Check Here](https://tuonai-worrie.onrender.com)\
 **APPLICATION:** [Download Here](https://github.com/worriee/quizmakerapp/releases)
 
 ---
@@ -39,7 +39,7 @@ TUON AI is an AI-powered learning platform that helps you explore topics, genera
 ![Tailwind](https://img.shields.io/badge/Tailwind_CSS_4-06B6D4?style=flat&logo=tailwindcss&logoColor=white)
 ![Express](https://img.shields.io/badge/Express.js-000000?style=flat&logo=express&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?style=flat&logo=supabase&logoColor=white)
-![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat&logo=vercel&logoColor=white)
+![Render](https://img.shields.io/badge/Render-46E3B7?style=flat&logo=render&logoColor=white)
 ![Resend](https://img.shields.io/badge/Resend_Email-000000?style=flat&logo=resend&logoColor=white)
 
 ---
