@@ -254,6 +254,14 @@ export function streamingVisibleText(accumulated) {
     // No <final> yet — strip visible structural tags
     visible = stripAllHtmlTags(accumulated).trim();
     if (!visible) return "";
+
+    // If the visible text starts with thinking patterns (no <final> meant the
+    // model started outputting reasoning before the response), show nothing
+    // until <final> arrives. This prevents thinking/reasoning from leaking
+    // into the streaming UI on Render where chunks may be delayed.
+    if (/^(The user (?:is asking|wants|provided|sent|said)|I (?:need|should|will|must|can)|Let me|Since |As an |Based on)/i.test(visible)) {
+      return "";
+    }
   }
 
   // JSON content inside <final> (Gemini notes/quiz) or raw JSON (NVIDIA)

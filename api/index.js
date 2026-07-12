@@ -14,6 +14,9 @@ import {
 
 const app = express();
 
+// Trust Render's proxy for correct IP forwarding and streaming behavior
+app.set("trust proxy", 1);
+
 const PRODUCTION_ORIGIN =
   process.env.CORS_ORIGIN || "https://quizmakerapp.vercel.app";
 
@@ -479,6 +482,11 @@ app.post("/api/chat/stream", chatLimiter, async (req, res) => {
     Connection: "keep-alive",
     "X-Accel-Buffering": "no",
   });
+
+  // Disable Nagle's algorithm for immediate chunk delivery through Render's proxy
+  if (req.socket && typeof req.socket.setNoDelay === "function") {
+    req.socket.setNoDelay(true);
+  }
 
   const abortController = new AbortController();
   req.on("close", () => {
