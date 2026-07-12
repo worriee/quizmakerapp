@@ -6,7 +6,7 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![PWA](https://img.shields.io/badge/PWA-ready-orange)
 
-**URL:** [quizmakerapp.vercel.app](https://quizmakerapp.vercel.app)\
+**URL:** [quizmakerapp.vercel.app](https://tuonai-worrie.onrender.com)\
 **APPLICATION:** [Download Here](https://github.com/worriee/quizmakerapp/releases)
 
 ---
