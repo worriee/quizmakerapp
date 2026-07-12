@@ -3,9 +3,9 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.tuonai.worrie",
+      "package_name": "com.onrender.tuonai_worrie.twa",
       "sha256_cert_fingerprints": [
-        "E4:29:6E:97:6A:63:7F:3E:7B:AC:E0:CD:44:BA:E9:36:72:C2:CB:03:0B:48:78:FF:A6:90:64:57:6D:A1:D7:40"
+        "74:0F:46:2F:1D:57:FB:D3:68:73:47:4F:7B:A7:35:44:6A:DC:62:ED:82:0D:89:37:5F:BB:7D:B1:23:4B:B5:45"
       ]
     }
   }

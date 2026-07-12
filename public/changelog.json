@@ -1,14 +1,12 @@
 [
   {
-    "version": "2.0",
+    "version": "2.5",
     "notes": [
-      "AI responses now stream word-by-word like ChatGPT — text appears progressively instead of all at once",
-      "added Cancel button to stop AI generation mid-stream",
-      "new AI models: Gemma 4 31B, Gemma 4 26B and Minimax M2.7",
-      "chat sesion title issues fixed",
-      "AI parser overhauled: better formatting, smarter thinking-text removal, cleaner markdown",
-      "chat sessions migrated to new database for faster loading and future search",
-      "connection lost banner with Retry button when boot fails due to network issues"
+      "Migrate platforms for backend compatibility.",
+      "Fix parsing issues for clean AI output",
+      "Added more models: 2 Gemma models and Minimax model",
+      "Strict limits for built-in models. Those are from free providers, don't abuse.",
+      "More updates to come expect more issues. (report if any occurs.)"
     ]
   }
 ]
