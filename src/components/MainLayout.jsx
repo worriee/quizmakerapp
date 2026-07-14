@@ -5,6 +5,7 @@ import deleteIcon from "../assets/delete.png";
 import logoutIcon from "../assets/logout.png";
 import lightIcon from "../assets/light.png";
 import darkIcon from "../assets/night-mode.png";
+import searchIcon from "../assets/search.png";
 
 import ModelSelector from "./ModelSelector";
 
@@ -28,6 +29,7 @@ const MainLayout = ({
   onDeleteCustomModel,
   theme,
   onToggleTheme,
+  onSearchSessions,
 }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(
     typeof window !== "undefined" ? window.innerWidth >= 1024 : true,
@@ -42,11 +44,53 @@ const MainLayout = ({
   const menuRef = useRef(null);
   const profileRef = useRef(null);
 
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState(null);
+  const searchTimerRef = useRef(null);
+  const searchInputRef = useRef(null);
+
   const VERSION = "2.5";
 
   const hasNewVersion =
     typeof window !== "undefined" &&
     localStorage.getItem("quizmaker_dismissed_version") !== VERSION;
+
+  // Close search dropdown on Escape
+  useEffect(() => {
+    const handleSearchKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setIsSearchOpen(false);
+        setSearchQuery("");
+        setSearchResults(null);
+      }
+    };
+    if (isSearchOpen) {
+      window.addEventListener("keydown", handleSearchKeyDown);
+      return () => window.removeEventListener("keydown", handleSearchKeyDown);
+    }
+  }, [isSearchOpen]);
+
+  const handleSearchInputChange = (e) => {
+    const val = e.target.value;
+    setSearchQuery(val);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (val.trim().length < 2) {
+      setSearchResults(null);
+      return;
+    }
+    searchTimerRef.current = setTimeout(async () => {
+      const results = await onSearchSessions(val);
+      setSearchResults(results);
+    }, 300);
+  };
+
+  const handleSearchSelect = (sessionId) => {
+    onLoadSession(sessionId);
+    setIsSearchOpen(false);
+    setSearchQuery("");
+    setSearchResults(null);
+  };
 
   const handleOpenChangelog = async () => {
     if (changelog) {
@@ -241,9 +285,25 @@ const MainLayout = ({
         <div className="p-4 flex flex-col h-full">
           <button
             onClick={onNewChat}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#7b9acc] text-white rounded-full hover:opacity-90 transition-all font-medium text-sm shadow-sm mb-8"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#7b9acc] text-white rounded-full hover:opacity-90 transition-all font-medium text-sm shadow-sm mb-6"
           >
-            <span className="text-lg">+</span> New Chat
+            New Chat
+          </button>
+
+          {/* Search chats */}
+          <button
+            onClick={() => {
+              setIsSearchOpen(true);
+              setTimeout(() => searchInputRef.current?.focus(), 100);
+            }}
+            className="w-full flex items-center gap-3 px-3 py-2 mb-6 rounded-lg text-sm text-app hover:bg-[#7b9acc]/10 transition-all"
+          >
+            <img
+              src={searchIcon}
+              alt="Search"
+              className={`w-4 h-4 shrink-0 ${theme === "dark" ? "brightness-0 invert" : ""}`}
+            />
+            Search chats
           </button>
 
           <div className="flex-1 overflow-y-auto space-y-6">
@@ -291,6 +351,124 @@ const MainLayout = ({
           <div className="pt-4 border-t border-[#7b9acc]/20" />
         </div>
       </aside>
+
+      {/* Search Modal */}
+      {isSearchOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] sm:pt-[15vh] bg-black/30 backdrop-blur-sm"
+          onClick={() => {
+            setIsSearchOpen(false);
+            setSearchQuery("");
+            setSearchResults(null);
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-lg mx-3 sm:mx-4 bg-app-surface border border-app rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-4"
+          >
+            <div className="p-4 border-b border-app flex items-center gap-3">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                className="w-5 h-5 text-app-muted shrink-0"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+                />
+              </svg>
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={handleSearchInputChange}
+                placeholder="Search sessions..."
+                className="flex-1 bg-transparent text-sm text-app placeholder-app-muted/50 focus:outline-none"
+              />
+              <button
+                onClick={() => {
+                  setIsSearchOpen(false);
+                  setSearchQuery("");
+                  setSearchResults(null);
+                }}
+                className="p-1.5 hover:bg-[#7b9acc]/10 rounded-full transition-all text-app/60 hover:text-app shrink-0"
+                aria-label="Close search"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="w-5 h-5"
+                >
+                  <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                </svg>
+              </button>
+            </div>
+            <div className="max-h-80 overflow-y-auto">
+              {!searchResults ? (
+                <div className="p-8 text-center">
+                  <p className="text-sm text-app-muted">
+                    Type at least 2 characters to search
+                  </p>
+                </div>
+              ) : searchResults.titleMatches?.length === 0 &&
+                searchResults.contentMatches?.length === 0 ? (
+                <div className="p-8 text-center">
+                  <p className="text-sm text-app-muted">
+                    No results found for "{searchQuery}"
+                  </p>
+                </div>
+              ) : (
+                <div className="py-2">
+                  {searchResults.titleMatches?.length > 0 && (
+                    <div>
+                      <div className="px-4 py-1.5 text-[10px] font-semibold text-app-muted uppercase tracking-wider">
+                        Title Matches
+                      </div>
+                      {searchResults.titleMatches.map((s) => (
+                        <button
+                          key={s.id}
+                          onClick={() => handleSearchSelect(s.id)}
+                          className="w-full text-left px-4 py-2.5 text-sm text-app hover:bg-[#7b9acc]/10 transition-colors flex items-center gap-3"
+                        >
+                          {s.pinned && (
+                            <span className="text-[10px] text-app-muted">
+                              📌
+                            </span>
+                          )}
+                          <span className="truncate">
+                            {s.topic || "Untitled"}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {searchResults.contentMatches?.length > 0 && (
+                    <div>
+                      <div className="px-4 py-1.5 text-[10px] font-semibold text-app-muted uppercase tracking-wider border-t border-app">
+                        Content Matches
+                      </div>
+                      {searchResults.contentMatches.map((s) => (
+                        <button
+                          key={s.id}
+                          onClick={() => handleSearchSelect(s.id)}
+                          className="w-full text-left px-4 py-2.5 text-sm text-app hover:bg-[#7b9acc]/10 transition-colors truncate"
+                        >
+                          {s.topic || "Untitled"}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">

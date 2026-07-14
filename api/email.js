@@ -1,8 +1,8 @@
-import { Resend } from 'resend';
+import { Resend } from "resend";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const EMAIL_FROM = process.env.EMAIL_FROM || 'TUON AI <onboarding@resend.dev>';
-const APP_URL = process.env.APP_URL || 'https://quizmakerapp.vercel.app';
+const EMAIL_FROM = process.env.EMAIL_FROM;
+const APP_URL = process.env.RENDER_EXTERNAL_URL;
 
 let resend = null;
 
@@ -15,7 +15,9 @@ if (RESEND_API_KEY) {
  */
 function ensureResend() {
   if (!resend) {
-    throw new Error('Email service not configured. Set RESEND_API_KEY environment variable.');
+    throw new Error(
+      "Email service not configured. Set RESEND_API_KEY environment variable.",
+    );
   }
 }
 
@@ -33,7 +35,7 @@ export async function sendVerificationEmail(email, token) {
     await resend.emails.send({
       from: EMAIL_FROM,
       to: email,
-      subject: 'Verify your TUON AI account',
+      subject: "Verify your TUON AI account",
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
           <h1 style="color: #7b9acc; font-size: 24px; margin-bottom: 8px;">TUON AI</h1>
@@ -56,8 +58,11 @@ export async function sendVerificationEmail(email, token) {
 
     return { success: true, error: null };
   } catch (err) {
-    console.error('[Email] Failed to send verification email:', err.message || err);
-    return { success: false, error: err.message || 'Failed to send email' };
+    console.error(
+      "[Email] Failed to send verification email:",
+      err.message || err,
+    );
+    return { success: false, error: err.message || "Failed to send email" };
   }
 }
 
@@ -75,7 +80,7 @@ export async function sendPasswordResetEmail(email, token) {
     await resend.emails.send({
       from: EMAIL_FROM,
       to: email,
-      subject: 'Reset your TUON AI password',
+      subject: "Reset your TUON AI password",
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
           <h1 style="color: #7b9acc; font-size: 24px; margin-bottom: 8px;">TUON AI</h1>
@@ -98,8 +103,11 @@ export async function sendPasswordResetEmail(email, token) {
 
     return { success: true, error: null };
   } catch (err) {
-    console.error('[Email] Failed to send password reset email:', err.message || err);
-    return { success: false, error: err.message || 'Failed to send email' };
+    console.error(
+      "[Email] Failed to send password reset email:",
+      err.message || err,
+    );
+    return { success: false, error: err.message || "Failed to send email" };
   }
 }
 
@@ -112,16 +120,16 @@ export async function sendPasswordResetEmail(email, token) {
 export async function sendLockoutEmail(email, lockedUntil) {
   try {
     ensureResend();
-    const unlockTime = new Date(lockedUntil).toLocaleString('en-US', {
-      timeZone: 'Asia/Manila',
-      dateStyle: 'full',
-      timeStyle: 'short',
+    const unlockTime = new Date(lockedUntil).toLocaleString("en-US", {
+      timeZone: "Asia/Manila",
+      dateStyle: "full",
+      timeStyle: "short",
     });
 
     await resend.emails.send({
       from: EMAIL_FROM,
       to: email,
-      subject: 'Your TUON AI account has been temporarily locked',
+      subject: "Your TUON AI account has been temporarily locked",
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
           <h1 style="color: #7b9acc; font-size: 24px; margin-bottom: 8px;">TUON AI</h1>
@@ -148,7 +156,7 @@ export async function sendLockoutEmail(email, lockedUntil) {
 
     return { success: true, error: null };
   } catch (err) {
-    console.error('[Email] Failed to send lockout email:', err.message || err);
-    return { success: false, error: err.message || 'Failed to send email' };
+    console.error("[Email] Failed to send lockout email:", err.message || err);
+    return { success: false, error: err.message || "Failed to send email" };
   }
 }

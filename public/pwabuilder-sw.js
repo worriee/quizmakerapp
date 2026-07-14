@@ -11,7 +11,11 @@ self.addEventListener("message", (event) => {
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.add(offlineFallbackPage))
+    caches.open(CACHE).then((cache) => cache.addAll([
+      offlineFallbackPage,
+      "/offline.css",
+      "/offline.js"
+    ]))
   );
   self.skipWaiting();
 });
@@ -43,5 +47,9 @@ self.addEventListener('fetch', (event) => {
         return cachedResp || new Response("Offline", { status: 503 });
       }
     })());
+  } else {
+    event.respondWith(
+      caches.match(event.request).then((cached) => cached || fetch(event.request))
+    );
   }
 });

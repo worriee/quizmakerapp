@@ -190,6 +190,23 @@ export function useSessions() {
     }
   }, []);
 
+  const searchSessions = useCallback(async (query) => {
+    if (!query || query.trim().length < 2) {
+      return { titleMatches: [], contentMatches: [] };
+    }
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/sessions/search?q=${encodeURIComponent(query.trim())}`,
+        { credentials: "include" },
+      );
+      if (!response.ok) throw new Error("Search failed");
+      return await response.json();
+    } catch (error) {
+      console.error("Error searching sessions:", error);
+      return { titleMatches: [], contentMatches: [] };
+    }
+  }, []);
+
   const reset = useCallback(() => {
     setSessions([]);
     localStorage.removeItem(SESSIONS_CACHE_KEY);
@@ -210,6 +227,7 @@ export function useSessions() {
     deleteSession,
     renameSession,
     togglePin,
+    searchSessions,
     reset,
   };
 }

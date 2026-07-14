@@ -17,8 +17,7 @@ const app = express();
 // Trust Render's proxy for correct IP forwarding and streaming behavior
 app.set("trust proxy", 1);
 
-const PRODUCTION_ORIGIN =
-  process.env.CORS_ORIGIN || "https://quizmakerapp.vercel.app";
+const PRODUCTION_ORIGIN = process.env.CORS_ORIGIN;
 
 app.use(
   cors({
@@ -94,6 +93,55 @@ sessionRouter.get("/", authenticate, async (req, res) => {
     res
       .status(500)
       .json({ error: error.message || "Failed to fetch sessions" });
+  }
+});
+
+// GET /api/sessions/search?q=... - search sessions by title and message content
+// IMPORTANT: Must be registered BEFORE /:id to prevent Express matching "search" as a session ID
+sessionRouter.get("/search", authenticate, async (req, res) => {
+  try {
+    const query = req.query.q;
+    if (!query || typeof query !== "string" || query.trim().length === 0) {
+      return res.json({ titleMatches: [], contentMatches: [] });
+    }
+
+    const searchTerm = `%${query.trim()}%`;
+
+    // Search session titles
+    const { data: titleMatches } = await supabaseService
+      .from("chat_sessions")
+      .select("id, topic, created_at, pinned")
+      .eq("user_id", req.user.id)
+      .ilike("topic", searchTerm)
+      .order("created_at", { ascending: false });
+
+    // Search message content for matching session IDs
+    const { data: contentMatches } = await supabaseService
+      .from("messages")
+      .select("session_id")
+      .ilike("content", searchTerm);
+
+    // Get unique session details from content matches
+    let contentSessions = [];
+    if (contentMatches && contentMatches.length > 0) {
+      const contentSessionIds = [...new Set(contentMatches.map((m) => m.session_id))];
+      const { data: sessions } = await supabaseService
+        .from("chat_sessions")
+        .select("id, topic, created_at, pinned")
+        .eq("user_id", req.user.id)
+        .in("id", contentSessionIds)
+        .order("created_at", { ascending: false });
+      contentSessions = sessions || [];
+    }
+
+    res.json({
+      titleMatches: titleMatches || [],
+      contentMatches: contentSessions,
+      query: query.trim(),
+    });
+  } catch (error) {
+    console.error("[Session] Search error:", error.message || error);
+    res.status(500).json({ error: error.message || "Search failed" });
   }
 });
 

@@ -41,6 +41,7 @@ function App() {
     deleteSession,
     renameSession,
     togglePin,
+    searchSessions,
     reset: resetSessions,
   } = useSessions();
 
@@ -170,6 +171,7 @@ function App() {
           onDeleteCustomModel={deleteCustomModel}
           theme={theme}
           onToggleTheme={toggleTheme}
+          onSearchSessions={searchSessions}
         >
           {view === "chat" && (
             <ChatInterface
