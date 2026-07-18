@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
+const API_BASE_URL = "/api";
 
 export function useAuth({ fetchSessions, restoreActiveSession }) {
   const [user, setUser] = useState(null);

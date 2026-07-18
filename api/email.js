@@ -2,7 +2,7 @@ import { Resend } from "resend";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const EMAIL_FROM = process.env.EMAIL_FROM;
-const APP_URL = process.env.APP_URL || process.env.RENDER_EXTERNAL_URL;
+const APP_URL = process.env.RENDER_EXTERNAL_URL;
 
 let resend = null;
 

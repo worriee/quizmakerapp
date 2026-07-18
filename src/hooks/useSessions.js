@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
+const API_BASE_URL = "/api";
 const SESSION_STORAGE_KEY = "quizmaker_current_session_id";
 const SESSIONS_CACHE_KEY = "quizmaker_sessions_cache";
 
