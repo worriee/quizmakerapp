@@ -12,15 +12,7 @@ dist
 dist-ssr
 *.local
 .env
-.opencode
-AGENTS.md
-opencode.json
 
-# Test artifacts
-test-results/
-playwright-report/
-coverage/
-*.test-results/
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -31,3 +23,9 @@ coverage/
 *.njsproj
 *.sln
 *.sw?
+.opencode
+AGENTS.md
+opencode.json
+.pi-subagents/artifacts/
+.mcp.json
+nul

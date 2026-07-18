@@ -6,7 +6,6 @@ import logoutIcon from "../assets/logout.png";
 import lightIcon from "../assets/light.png";
 import darkIcon from "../assets/night-mode.png";
 import searchIcon from "../assets/search.png";
-
 import ModelSelector from "./ModelSelector";
 
 const MainLayout = ({
