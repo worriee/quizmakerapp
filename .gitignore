@@ -12,9 +12,6 @@ dist
 dist-ssr
 *.local
 .env
-.opencode
-AGENTS.md
-opencode.json
 
 # Test artifacts
 test-results/
@@ -31,3 +28,7 @@ coverage/
 *.njsproj
 *.sln
 *.sw?
+.opencode
+AGENTS.md
+opencode.json
+.mcp.json
