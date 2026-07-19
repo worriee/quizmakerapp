@@ -4,6 +4,14 @@
   "description": "Undo/Redo for Pi using Git snapshots",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/worrie/pi-rewind.git"
+  },
+  "homepage": "https://github.com/worrie/pi-rewind#readme",
+  "bugs": {
+    "url": "https://github.com/worrie/pi-rewind/issues"
+  },
   "keywords": [
     "pi-package",
     "pi-extension",
