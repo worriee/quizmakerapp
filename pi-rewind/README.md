@@ -5,7 +5,7 @@ Undo/Redo for Pi using automatic Git snapshots.
 ## Install
 
 ```bash
-pi install npm:pi-rewind
+pi install npm:@worrie/pi-rewind
 ```
 
 ## Usage
