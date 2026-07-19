@@ -2,9 +2,11 @@
 
 > To Understand Own Navigation.
 
-<img src="https://badgen.net/badge/version/2.5/blue" height="30" />
-<img src="https://badgen.net/badge/license/MIT/green" height="30" />
-<img src="https://badgen.net/badge/PWA/ready/orange" height="30" />
+<p>
+    <img src="https://badgen.net/badge/version/2.5/blue" height="30" />
+    <img src="https://badgen.net/badge/license/MIT/green" height="30" />
+    <img src="https://badgen.net/badge/PWA/ready/orange" height="30" />
+</p>
 
 **URL:** [Visit](https://tuonai-worrie.onrender.com)\
 **APPLICATION:** [Download](https://github.com/worriee/quizmakerapp/releases)
@@ -34,6 +36,7 @@ TUON AI is an AI-powered learning platform that helps you explore topics, genera
 
 ## Tech Stack
 
+<p>
 <img src="https://badgen.net/badge/%20/React/20232A?icon=react" height="30" />
 <img src="https://badgen.net/badge/%20/Vite%208/646CFF?icon=vite" height="30" />
 <img src="https://badgen.net/badge/%20/Tailwind%20CSS%204/06B6D4?icon=tailwindcss" height="30" />
@@ -41,6 +44,7 @@ TUON AI is an AI-powered learning platform that helps you explore topics, genera
 <img src="https://badgen.net/badge/%20/Supabase/3FCF8E?icon=supabase" height="30" />
 <img src="https://badgen.net/badge/%20/Render/46E3B7?icon=render" height="30" />
 <img src="https://badgen.net/badge/%20/Resend/000000?icon=resend" height="30" />
+</p>
 
 ---
 
