@@ -1,5 +1,5 @@
 {
-  "name": "pi-rewind",
+  "name": "@worrie/pi-rewind",
   "version": "1.0.0",
   "description": "Undo/Redo for Pi using Git snapshots",
   "type": "module",
