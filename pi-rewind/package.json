@@ -1,0 +1,37 @@
+{
+  "name": "pi-rewind",
+  "version": "1.0.0",
+  "description": "Undo/Redo for Pi using Git snapshots",
+  "type": "module",
+  "license": "MIT",
+  "author": "",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "pi-coding-agent",
+    "agent",
+    "tui"
+  ],
+  "files": [
+    "extensions",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/rewind.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.74.0 <1",
+    "@earendil-works/pi-tui": ">=0.74.0 <1",
+    "typebox": "*"
+  }
+}
