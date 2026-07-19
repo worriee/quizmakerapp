@@ -1,16 +1,8 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import type { AutocompleteItem } from "@earendil-works/pi-tui";
 
-// ---------------------------------------------------------------------------
-// pi-rewind.ts — Undo/Redo for Pi using Git snapshots
-//
-// Inspired by OpenCode's /undo and /redo which use Git to revert file changes
-// and fork the session back to before the undone user message.
-// ---------------------------------------------------------------------------
+// pi-rewind — Undo/Redo for Pi using Git snapshots
 
-// Entry point
 export default function (pi: ExtensionAPI) {
-  let cwd = "";
   let previousSessionFile: string | null = null;
 
   // ===================================================================
@@ -80,18 +72,6 @@ export default function (pi: ExtensionAPI) {
     }
   }
 
-  /** Get the HEAD commit hash */
-  async function getHeadCommit(): Promise<string | null> {
-    try {
-      const result = await pi.exec("git", ["rev-parse", "HEAD"], {
-        timeout: 5000,
-      });
-      return result.stdout.trim() || null;
-    } catch {
-      return null;
-    }
-  }
-
   /** Find the entry ID of the last user message */
   function findLastUserEntryId(
     entries: { id: string; type: string; message?: { role: string } }[],
@@ -114,9 +94,7 @@ export default function (pi: ExtensionAPI) {
    * Called after each agent turn to auto-snapshot if there are changes.
    * Stores the commit hash in session memory for undo tracking.
    */
-  async function autoSnapshot(ctx: {
-    sessionManager: { getEntries: Function };
-  }): Promise<void> {
+  async function autoSnapshot(): Promise<void> {
     if (!(await isGitRepo())) return;
     if (!(await hasChanges())) return;
 
@@ -337,16 +315,14 @@ export default function (pi: ExtensionAPI) {
   // EVENT HOOKS
   // ===================================================================
 
-  // Auto-snapshot after each agent turn ends (captures file changes)
-  pi.on("turn_end", async (_event, ctx) => {
-    await autoSnapshot(ctx);
+  // Auto-snapshot after each agent turn ends
+  pi.on("turn_end", async () => {
+    await autoSnapshot();
   });
 
-  // Auto-snapshot when session starts (captures any changes from before)
-  pi.on("session_start", async (event, ctx) => {
-    cwd = ctx.cwd;
-
-    // When undo forks the session, remember the old session file for redo
+  // Remember the old session file on fork so /redo can switch back
+  pi.on("session_start", async (event) => {
+    if (event.reason === "fork" && event.previousSessionFile) {
     if (event.reason === "fork" && event.previousSessionFile) {
       previousSessionFile = event.previousSessionFile;
     }
