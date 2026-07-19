@@ -323,7 +323,6 @@ export default function (pi: ExtensionAPI) {
   // Remember the old session file on fork so /redo can switch back
   pi.on("session_start", async (event) => {
     if (event.reason === "fork" && event.previousSessionFile) {
-    if (event.reason === "fork" && event.previousSessionFile) {
       previousSessionFile = event.previousSessionFile;
     }
 
