@@ -2,12 +2,12 @@
 
 > To Understand Own Navigation.
 
-![Version](https://img.shields.io/badge/version-2.5-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![PWA](https://img.shields.io/badge/PWA-ready-orange)
+<img src="https://badgen.net/badge/version/2.5/blue" height="30" />
+<img src="https://badgen.net/badge/license/MIT/green" height="30" />
+<img src="https://badgen.net/badge/PWA/ready/orange" height="30" />
 
-**URL:** [Check Here](https://tuonai-worrie.onrender.com)\
-**APPLICATION:** [Download Here](https://github.com/worriee/quizmakerapp/releases)
+**URL:** [Visit](https://tuonai-worrie.onrender.com)\
+**APPLICATION:** [Download](https://github.com/worriee/quizmakerapp/releases)
 
 ---
 
@@ -34,13 +34,13 @@ TUON AI is an AI-powered learning platform that helps you explore topics, genera
 
 ## Tech Stack
 
-![React](https://img.shields.io/badge/React_19-61DAFB?style=flat&logo=react&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite_8-646CFF?style=flat&logo=vite&logoColor=white)
-![Tailwind](https://img.shields.io/badge/Tailwind_CSS_4-06B6D4?style=flat&logo=tailwindcss&logoColor=white)
-![Express](https://img.shields.io/badge/Express.js-000000?style=flat&logo=express&logoColor=white)
-![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?style=flat&logo=supabase&logoColor=white)
-![Render](https://img.shields.io/badge/Render-46E3B7?style=flat&logo=render&logoColor=white)
-![Resend](https://img.shields.io/badge/Resend_Email-000000?style=flat&logo=resend&logoColor=white)
+<img src="https://badgen.net/badge/%20/React/20232A?icon=react" height="30" />
+<img src="https://badgen.net/badge/%20/Vite%208/646CFF?icon=vite" height="30" />
+<img src="https://badgen.net/badge/%20/Tailwind%20CSS%204/06B6D4?icon=tailwindcss" height="30" />
+<img src="https://badgen.net/badge/%20/Express.js/000000?icon=express" height="30" />
+<img src="https://badgen.net/badge/%20/Supabase/3FCF8E?icon=supabase" height="30" />
+<img src="https://badgen.net/badge/%20/Render/46E3B7?icon=render" height="30" />
+<img src="https://badgen.net/badge/%20/Resend/000000?icon=resend" height="30" />
 
 ---
 
