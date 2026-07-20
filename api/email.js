@@ -2,7 +2,7 @@ import { Resend } from "resend";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const EMAIL_FROM = process.env.EMAIL_FROM;
-const APP_URL = process.env.RENDER_EXTERNAL_URL;
+const RENDER_EXTERNAL_URL = process.env.RENDER_EXTERNAL_URL;
 
 let resend = null;
 
@@ -30,7 +30,7 @@ function ensureResend() {
 export async function sendVerificationEmail(email, token) {
   try {
     ensureResend();
-    const verifyUrl = `${APP_URL}/verify-email?token=${token}`;
+    const verifyUrl = `${RENDER_EXTERNAL_URL}/verify-email?token=${token}`;
 
     await resend.emails.send({
       from: EMAIL_FROM,
@@ -75,7 +75,7 @@ export async function sendVerificationEmail(email, token) {
 export async function sendPasswordResetEmail(email, token) {
   try {
     ensureResend();
-    const resetUrl = `${APP_URL}/reset-password?token=${token}`;
+    const resetUrl = `${RENDER_EXTERNAL_URL}/reset-password?token=${token}`;
 
     await resend.emails.send({
       from: EMAIL_FROM,
