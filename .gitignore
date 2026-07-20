@@ -28,7 +28,7 @@ coverage/
 *.njsproj
 *.sln
 *.sw?
-.opencode
+.opencode/
 AGENTS.md
 opencode.json
 .mcp.json
