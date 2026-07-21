@@ -1,10 +1,10 @@
 # TUON AI
 
-> To Understand Own Navigation.
+<p align="center"> <strong>T</strong>o <strong>U</strong>nderstand <strong>O</strong>wn <strong>N</strong>avigation.</p>
 
-<p>
+<p align="center">
     <img src="https://badgen.net/badge/version/2.5/blue" height="30" />
-    <img src="https://badgen.net/badge/license/MIT/green" height="30" />
+    <img src="https://badgen.net/badge/license/MIT/red" height="30" />
     <img src="https://badgen.net/badge/PWA/ready/orange" height="30" />
 </p>
 
@@ -30,7 +30,7 @@ TUON AI is an AI-powered learning platform that helps you explore topics, genera
 | Email Verification  | Secure account creation with email confirmation                             |
 | Password Reset      | Self-service account recovery                                               |
 | Account Protection  | Auto-lock after 5 failed login attempts                                     |
-| PWA                 | Install on your phone, works offline                                        |
+| PWA                 | Install on your phone                                                       |
 
 ---
 
